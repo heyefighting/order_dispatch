@@ -462,8 +462,7 @@ class CPO:
                       cost_state_dict=self.cost_function.state_dict(),
                       mean_rewards=self.mean_rewards,
                       mean_costs=self.mean_costs,
-                      episode_num=self.episode_num,
-                      elapsed_time=self.elapsed_time)
+                      episode_num=self.episode_num)
 
         torch.save(ptFile, save_path)
 
@@ -477,7 +476,6 @@ class CPO:
         self.mean_rewards = ptFile['mean_rewards']
         self.mean_costs = ptFile['mean_costs']
         self.episode_num = ptFile['episode_num']
-        self.elapsed_time = ptFile['elapsed_time']
 
     def print_update(self):
         update_message = '[Episode]: {0} | [Avg. Reward]: {1} | [Avg. Cost]: {2}'
