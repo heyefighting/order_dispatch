@@ -40,13 +40,13 @@ def mean_kl_first_fixed(dist_1_detached, dist_2):
     from the computational graph
     Parameters
     ----------
-    dist_1 : torch.distributions.distribution.Distribution 真实概率分布 p
+    dist_1 : 真实概率分布 p
         the first argument to the kl-divergence function (will be fixed)
-    dist_2 : torch.distributions.distribution.Distribution 不真实的概率分布 q
+    dist_2 : 不真实的概率分布 q
         the second argument to the kl-divergence function (will not be fixed)
     Returns
     -------
-    mean_kl : torch.float
+    mean_kl :
         the kl-divergence between dist_1 and dist_2
     """
     kl = torch.sum(
