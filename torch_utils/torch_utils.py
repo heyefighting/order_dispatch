@@ -46,11 +46,11 @@ def flatten(tensors):
     Return an unrolled, concatenated copy of vecs
     Parameters
     ----------
-    tensors : list
+    tensors : tensor
         a list of Pytorch Tensor objects
     Returns
     -------
-    flattened : torch.FloatTensor
+    flattened : tensor
         the flattened version of vecs
     """
 

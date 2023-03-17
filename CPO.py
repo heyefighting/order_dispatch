@@ -311,7 +311,7 @@ class CPO:
         c = (J_c - self.max_constraint_val).to(self.device)  # c = J_c(π_k) − d
 
         EPS = 1e-8
-        if torch.matmul(constraint_grad, constraint_grad) <= EPS and c < 0:
+        if torch.matmul(constraint_grad, constraint_grad).item() <= EPS and c < 0:
             # feasible and cost grad is zero --- shortcut to pure TRPO update
             lam = torch.sqrt(q / (2 * self.max_kl))
             nu = 0.0
