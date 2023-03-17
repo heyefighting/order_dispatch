@@ -31,6 +31,7 @@ def discount(value, discount_term):
     return discounted
 
 
+# 广义优势估计:A^(GAE)_t=\sum(gamma*lambda)^l*delta_(t+l)
 def compute_advantage(actual_value, exp_value, discount_term, bias_red_param):
     exp_value_next = torch.cat([exp_value[1:], torch.tensor([0.0])])
     td_res = actual_value + discount_term * exp_value_next - exp_value  # 时序差分误差td_error:r+gamma*V(s_t+1)-V(s_t)
@@ -39,8 +40,17 @@ def compute_advantage(actual_value, exp_value, discount_term, bias_red_param):
     return advantage
 
 
-# 广义优势估计:A^(GAE)_t=\sum(gamma*lambda)^l*delta_(t+l)
+# GAE的代码
 def compute_adv(gamma, lm, td_delta):
+    """
+    GAE 将不同步数的优势估计进行指数加权平均
+    :param gamma: 折扣因子
+    :param lm:
+           lm=0时, A_t=delta_t=r+gamma*V(s_t+1)-V(s_t),仅仅只看一步差分得到的优势;
+           lm=1时, A_t=sum_{l=0}^{T}(gamma^l*r_{t+l})是看每一步差分得到优势的完全平均值
+    :param td_delta: 时序差分
+    :return:优势函数
+    """
     advantage_list = []
     advantage = 0.0
     for delta in td_delta[::-1]:
