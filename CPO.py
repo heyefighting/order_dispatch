@@ -294,7 +294,7 @@ class CPO:
         # log_action_prob = torch.log(self.policy(states).gather(1, actions))
         imp_sampling = torch.exp(log_action_prob - log_action_prob.detach()).view(-1, 1)  # 重要性采样
 
-        reward_loss = torch.mean(imp_sampling * reward_advantage)  # 以平均作为期望,surrogate_objective
+        reward_loss = -torch.mean(imp_sampling * reward_advantage)  # 以平均作为期望,-surrogate_objective
         reward_grad = flat_grad(reward_loss, self.policy.parameters(), retain_graph=True)  # 计算梯度
 
         constraint_loss = torch.mean(imp_sampling * constraint_advantage)

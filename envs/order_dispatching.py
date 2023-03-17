@@ -73,8 +73,8 @@ def process_memory(next_state, dispatch_result):
         # next_state1 = get_next_state(next_state, next_courier_state)
         next_states.append(next_state1)
 
-    return np.array(state_inputs, dtype='object'), np.array(states, dtype='object'), np.array(actions), \
-           np.array(rewards), np.array(next_states, dtype='object'), np.array(costs)  # , policy
+    return np.array(state_inputs), np.array(states), np.array(actions), \
+           np.array(rewards), np.array(next_states), np.array(costs)  # , policy
 
 
 class DispatchPair:
