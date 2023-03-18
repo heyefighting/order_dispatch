@@ -271,6 +271,13 @@ class CPO:
                 cost_advantage = compute_adv(self.discount_cost, self.lambda_cost,
                                              td_delta_cost.cpu().detach().numpy()).to(self.device)
 
+                # 线性变换(x-mean)/std:不改变数组分布形状，只是将数据的平均数变为0，标准差变为1
+                # 标准化后求梯度更快点
+                reward_advantage -= reward_advantage.mean()
+                reward_advantage /= reward_advantage.std()
+                cost_advantage -= cost_advantage.mean()
+                cost_advantage /= cost_advantage.std()
+
                 self.update_Actor(batch_state, batch_action, reward_advantage, cost_advantage, J_cost)
                 self.update_Critic(self.value_function, self.value_optimizer, batch_s, batch_reward,
                                    self.val_small_loss, trajectory_value_loss)
@@ -355,7 +362,7 @@ class CPO:
                 # Test if conditions are satisfied
                 test_prob = torch.tensor([]).to(device)
                 test_dists = torch.tensor([]).to(device)
-                for index in range(self.batch_size):
+                for index in range(len(states)):
                     s_ = torch.tensor(states[index], dtype=torch.float).to(device)
                     test_dist = self.policy(s_)
                     lg_ = torch.log(test_dist.gather(0, actions[index])).to(device)
@@ -398,7 +405,7 @@ class CPO:
         def mse():
             optimizer.zero_grad()
 
-            predictions = critic(states).view(-1)
+            predictions = critic(states).view(-1, 1)
             loss = self.mse_loss(predictions, targets)
 
             flat_params = get_flat_params(critic)
