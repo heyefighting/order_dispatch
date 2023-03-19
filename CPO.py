@@ -331,6 +331,7 @@ class CPO:
         EPS = 1e-8
         if torch.matmul(constraint_grad, constraint_grad).item() <= EPS and c < 0:
             # feasible and cost grad is zero --- shortcut to pure TRPO update
+            is_feasible = True
             lam = torch.sqrt(q / (2 * self.max_kl))
             nu = 0.0
             search_dir = -(1 / (lam + EPS)) * (F_inv_g + nu * F_inv_b)  # 1/lam*(H^(-1)g-H^(-1)B*nu)
