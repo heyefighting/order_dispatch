@@ -282,7 +282,7 @@ class CPO:
                 self.update_Critic(self.value_function, self.value_optimizer, batch_s, batch_reward,
                                    self.val_small_loss, trajectory_value_loss)
                 self.update_Critic(self.cost_function, self.cost_optimizer, batch_s, batch_cost,
-                                   self.cost_small_loss, trajectory_value_loss)
+                                   self.cost_small_loss, trajectory_cost_loss)
 
             self.mean_value_loss.append(torch.mean(torch.Tensor(trajectory_value_loss)))
             self.mean_cost_loss.append(torch.mean(torch.Tensor(trajectory_cost_loss)))
@@ -312,6 +312,7 @@ class CPO:
         imp_sampling = torch.exp(log_action_prob - log_action_prob.detach()).view(-1, 1)  # 重要性采样
 
         reward_loss = -torch.mean(imp_sampling * reward_advantage)  # 以平均作为期望,-surrogate_objective
+        print(reward_loss)
         reward_grad = flat_grad(reward_loss, self.policy.parameters(), retain_graph=True)  # 计算梯度
 
         constraint_loss = torch.mean(imp_sampling * constraint_advantage)
@@ -323,8 +324,8 @@ class CPO:
         # 用共轭梯度法计算x = H^(-1)g
         F_inv_g = cg_solver(Fvp_fun, reward_grad, self.device)  # F_inv_g = H^(-1)g, g是目标函数的梯度
         F_inv_b = cg_solver(Fvp_fun, constraint_grad, self.device)  # F_inv_b = H^(-1)B, bi是第i个约束的梯度
-        # 计算g*H^(-1)g
-        q = torch.matmul(reward_grad, F_inv_g)
+
+        q = torch.matmul(reward_grad, F_inv_g)  # q = g^T*H^(-1)g
         c = (J_c - self.max_constraint_val).to(self.device)  # c = J_c(π_k) − d
 
         EPS = 1e-8
@@ -337,8 +338,8 @@ class CPO:
             r = torch.matmul(reward_grad, F_inv_b)  # r = g^T*(H^(-1)B)
             s = torch.matmul(constraint_grad, F_inv_b)  # s = B^T*(H^(-1)B)x
             # infeasible(即CPO会take a bad step, 计算出来的policy是不满足cost约束的)
-            # 只有部分的trust region都在constraint-satisfying half_space内，
-            # 此时CMDP的可行解不一定在trust region内,所以可能需要recovery。
+            # 只有部分的trust region都在constraint-satisfying half_space内,
+            # 此时CMDP的可行解不一定在trust region内, 所以可能需要recovery
             is_feasible = False if c > 0 and c ** 2 / s - 2 * self.max_kl > 0 else True  # delta=1/2*(J_c-max_cost)
 
             if is_feasible:  # 对偶解法
@@ -358,8 +359,7 @@ class CPO:
             test_policy = current_policy + step_length * search_direction
             set_params(self.policy, test_policy)
 
-            with torch.no_grad():
-                # Test if conditions are satisfied
+            with torch.no_grad():  # Test if conditions are satisfied
                 test_prob = torch.tensor([]).to(device)
                 test_dists = torch.tensor([]).to(device)
                 for index in range(len(states)):
@@ -369,18 +369,18 @@ class CPO:
                     test_prob = torch.cat((test_prob, lg_), 0).to(device)
                     test_dists = torch.cat((test_dists, test_dist), 0).to(device)
 
-                # test_dists = self.policy(states)
-                # test_prob = test_dists.log_prob(actions)
                 importance_sampling = torch.exp(test_prob - log_action_prob.detach())
                 test_loss = -torch.mean(importance_sampling * reward_advantage)
 
+                # 判断loss是否下降
                 actual_improve = test_loss - reward_loss
                 expected_improve = step_length * expected_loss_improve
                 loss_cond = actual_improve / expected_improve >= self.line_search_accept_ratio
 
-                # test_cost = torch.sum(importance_sampling * constraint_advantage) / self.env.n_trajectories
+                # 判断cost是否在范围内
                 cost_cond = step_length * torch.matmul(constraint_grad, search_direction) <= max(-c, 0.0)
 
+                # 判断kl散度是否在范围内
                 test_kl = mean_kl_first_fixed(action_dists.detach(), test_dists)  # 新旧策略之间的KL距离
                 kl_cond = (test_kl <= self.max_kl)
 
@@ -390,7 +390,7 @@ class CPO:
                 return loss_cond and cost_cond and kl_cond
 
             return cost_cond and kl_cond
-
+        # 若十步内找不到合适的参数, step_len就返回0, 即参数不变
         step_len = line_search(search_dir, 1.0, line_search_criterion,
                                self.line_search_coefficient, self.line_search_max_iter)
         new_policy = current_policy + step_len * search_dir
@@ -479,6 +479,8 @@ class CPO:
                       cost_state_dict=self.cost_function.state_dict(),
                       mean_rewards=self.mean_rewards,
                       mean_costs=self.mean_costs,
+                      mean_value_loss=self.mean_value_loss,
+                      mean_cost_loss=self.mean_cost_loss,
                       episode_num=self.episode_num)
 
         torch.save(ptFile, save_path)
@@ -492,6 +494,8 @@ class CPO:
         self.cost_function.load_state_dict(ptFile['cost_state_dict'])
         self.mean_rewards = ptFile['mean_rewards']
         self.mean_costs = ptFile['mean_costs']
+        self.mean_value_loss = ptFile['mean_value_loss']
+        self.mean_cost_loss = ptFile['mean_cost_loss']
         self.episode_num = ptFile['episode_num']
 
     def print_update(self):

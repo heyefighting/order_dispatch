@@ -24,7 +24,7 @@ if __name__ == '__main__':
     capacity = int(1e+6)  # 1.0*10^6=1000000, 经验池的capacity
 
     # config
-    max_kl = 1e-2  # 最大KL距离约束（新旧策略更新的KL距离差距）同TRPO算法
+    max_kl = 1e-2  # 最大KL距离约束（新旧策略更新的KL距离差距）同TRPO算法 0.01
     max_constraint_val = batch*0.05  # 超时率5%
     val_lr = 1e-2  # Adm优化器学习率 Critic网络
     cost_lr = 1e-2

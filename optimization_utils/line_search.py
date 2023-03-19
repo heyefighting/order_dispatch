@@ -38,7 +38,7 @@ def line_search(search_dir, max_step_len, constraints_satisfied, line_search_coe
     step_len = max_step_len / line_search_coefficient
 
     for i in range(max_iter):
-        step_len *= line_search_coefficient
+        step_len *= line_search_coefficient  # max_len, max_len*coefficient, max_len*coefficient^2, ...
 
         if constraints_satisfied(step_len * search_dir, step_len):
             return step_len
