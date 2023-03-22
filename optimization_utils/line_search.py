@@ -43,4 +43,4 @@ def line_search(search_dir, max_step_len, constraints_satisfied, line_search_coe
         if constraints_satisfied(step_len * search_dir, step_len):
             return step_len
 
-    return torch.tensor(0.0)
+    return torch.tensor(0.0,dytpe=torch.float32)

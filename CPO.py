@@ -57,7 +57,7 @@ def compute_adv(gamma, lm, td_delta):
         advantage = gamma * lm * advantage + delta
         advantage_list.append(advantage)
     advantage_list.reverse()
-    return torch.tensor(advantage_list, dtype=torch.float)
+    return torch.tensor(advantage_list, dtype=torch.float32)
 
 
 class ReplayMemory:
@@ -193,7 +193,7 @@ class CPO:
         self.cost_function.to(device)
 
     def take_action(self, state):
-        state_ = torch.tensor(state, dtype=torch.float).to(self.device)
+        state_ = torch.tensor(state, dtype=torch.float32).to(self.device)
         action_prob = self.policy(state_)
         action_dist = torch.distributions.Categorical(action_prob)
         # c_id_ = np.argmax(action_dist.sample().cpu())
@@ -260,13 +260,13 @@ class CPO:
             for _ in range(20):
                 batch_state, batch_s, batch_reward, batch_next_s, batch_cost, batch_action = self.replay.sample()
 
-                J_cost = torch.sum(torch.tensor(batch_cost, dtype=torch.float)).to(self.device)
-                batch_s = torch.tensor(batch_s, dtype=torch.float).to(self.device)
-                batch_next_s = torch.tensor(batch_next_s, dtype=torch.float).to(self.device)
+                J_cost = torch.sum(torch.tensor(batch_cost, dtype=torch.float32)).to(self.device)
+                batch_s = torch.tensor(batch_s, dtype=torch.float32).to(self.device)
+                batch_next_s = torch.tensor(batch_next_s, dtype=torch.float32).to(self.device)
 
                 batch_action = torch.LongTensor(batch_action).view(-1, 1).to(self.device)
-                batch_reward = torch.tensor(batch_reward, dtype=torch.float).view(-1, 1).to(self.device)
-                batch_cost = torch.tensor(batch_cost, dtype=torch.float).view(-1, 1).to(self.device)
+                batch_reward = torch.tensor(batch_reward, dtype=torch.float32).view(-1, 1).to(self.device)
+                batch_cost = torch.tensor(batch_cost, dtype=torch.float32).view(-1, 1).to(self.device)
 
                 td_target_value = batch_reward + self.discount_val * self.value_function(batch_next_s)
                 td_delta_value = td_target_value - self.value_function(batch_s)
@@ -309,7 +309,7 @@ class CPO:
         log_action_prob = torch.tensor([]).to(device)
         action_dists = torch.tensor([]).to(device)
         for i in range(len(states)):
-            s = torch.tensor(states[i], dtype=torch.float).to(device)
+            s = torch.tensor(states[i], dtype=torch.float32).to(device)
             action_dist = self.policy(s)
             lg = torch.log(action_dist.gather(0, actions[i])).to(device)
             log_action_prob = torch.cat((log_action_prob, lg), 0).to(device)
@@ -371,7 +371,7 @@ class CPO:
                 test_prob = torch.tensor([]).to(device)
                 test_dists = torch.tensor([]).to(device)
                 for index in range(len(states)):
-                    s_ = torch.tensor(states[index], dtype=torch.float).to(device)
+                    s_ = torch.tensor(states[index], dtype=torch.float32).to(device)
                     test_dist = self.policy(s_)
                     lg_ = torch.log(test_dist.gather(0, actions[index])).to(device)
                     test_prob = torch.cat((test_prob, lg_), 0).to(device)

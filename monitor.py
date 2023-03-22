@@ -17,14 +17,14 @@ class Monitor(object):
             self.value_loss_window = self.vis.line(
                 X=torch.zeros((1,)).cpu(),
                 Y=torch.zeros(1).cpu(),  # torch.zeros((1))
-                opts=dict(xlabel='step',
+                opts=dict(xlabel='episode',
                           ylabel='mle loss for value Critic Network',
                           title='Training Loss' + spec,
                           legend=['Loss']))
             self.cost_loss_window = self.vis.line(
                 X=torch.zeros((1,)).cpu(),
                 Y=torch.zeros(1).cpu(),  # torch.zeros((1))
-                opts=dict(xlabel='step',
+                opts=dict(xlabel='episode',
                           ylabel='mle loss for cost Critic Network',
                           title='Training Loss' + spec,
                           legend=['Loss']))
