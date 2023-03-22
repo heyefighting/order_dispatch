@@ -87,16 +87,23 @@ class ReplayMemory:
             # self.policy = p
 
         elif self.curr_lens + len(s) <= self.memory_size:  # len(s)=s.shape[0]
-            self.states = np.concatenate((self.states, s), axis=0)
-            self.state_inputs = np.concatenate((self.state_inputs, sa), axis=0)
-            self.next_states = np.concatenate((self.next_states, next_s), axis=0)
-            self.actions = np.concatenate((self.actions, a), axis=0)
-            self.rewards = np.concatenate((self.rewards, r), axis=0)
-            self.curr_lens = self.states.shape[0]
-            self.cost = np.concatenate((self.cost, c), axis=0)
+            # self.states = np.concatenate((self.states, s), axis=0)
+            # self.state_inputs = np.concatenate((self.state_inputs, sa), axis=0)
+            # self.next_states = np.concatenate((self.next_states, next_s), axis=0)
+            # self.actions = np.concatenate((self.actions, a), axis=0)
+            # self.rewards = np.concatenate((self.rewards, r), axis=0)
+            # self.curr_lens = self.states.shape[0]
+            # self.cost = np.concatenate((self.cost, c), axis=0)
             # self.policy = np.concatenate((self.policy, p), axis=0)
+            self.states.extend(s)
+            self.state_inputs.extend(sa)
+            self.next_states.extend(next_s)
+            self.actions.extend(a)
+            self.rewards.extend(r)
+            self.curr_lens = len(self.states)
+            self.cost.extend(c)
         else:
-            new_sample_lens = s.shape[0]
+            new_sample_lens = len(s)
             reserve_lens = self.memory_size - new_sample_lens
 
             self.states[0:reserve_lens] = self.states[self.curr_lens - reserve_lens:self.curr_lens]
