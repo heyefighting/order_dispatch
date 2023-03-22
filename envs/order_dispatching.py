@@ -152,22 +152,23 @@ class DispatchPair:
                     delivery_efficiency.append(0)
 
         efficiency = torch.from_numpy(np.array(delivery_efficiency)).to(device)
-        mean_efficiency = torch.tensor([np.mean(np.array(delivery_efficiency))] * efficiency.shape[0]).to(device)
+        dispatch_efficiency = np.mean(np.array(delivery_efficiency))
+        mean_efficiency = torch.tensor([dispatch_efficiency] * efficiency.shape[0]).to(device)
         courier_fairness = Loss(efficiency, mean_efficiency).item()
 
         for shop in involved_shop:
             shopRadioMean = 0
             num = 0
-            # for r in shop.order_time_distance_radio:
-            #     if r:
-            #         for rr in r:
-            #             num += 1
-            #             shopRadioMean += rr
-            r = shop.order_time_distance_radio[shop.day_index]  # 不累计
-            if r:
-                for rr in r:
-                    num += 1
-                    shopRadioMean += rr
+            for r in shop.order_time_distance_radio:
+                if r:
+                    for rr in r:
+                        num += 1
+                        shopRadioMean += rr
+            # r = shop.order_time_distance_radio[shop.day_index]  # 不累计
+            # if r:
+            #     for rr in r:
+            #         num += 1
+            #         shopRadioMean += rr
             if shopRadioMean != 0:
                 shop_radio_sum.append(shopRadioMean / num)
         if len(shop_radio_sum) == 0:
@@ -178,4 +179,5 @@ class DispatchPair:
             shop_fairness = Loss(fairness, mean_fairness).item()
 
         # three parts: order price + courier fairness + shop fairness
+        # print(np.mean(np.array(delivery_efficiency)))
         self.reward = (1 - alpha - beta) * dispatch_efficiency - alpha * courier_fairness - beta * shop_fairness

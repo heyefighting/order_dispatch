@@ -121,8 +121,8 @@ class Environment:
 
     def update_env(self):
         self.time_slot_index = 0
-        # self.update_couriers()  # 重置courier_dict中骑手新的一天上线时间、出现位置、清空路线、工作天数+1
-        self.initialize_couriers(self.n_couriers)  # 骑手收入不再累积, 故初始化
+        self.update_couriers()  # 重置courier_dict中骑手新的一天上线时间、出现位置、清空路线、工作天数+1
+        # self.initialize_couriers(self.n_couriers)  # 骑手收入不再累积, 故初始化
         self.update_shops()  # 商家运营天数+1
         self.generate_one_day_couriers()  # 按照重置的上线时间，重置self.day_couriers
 
