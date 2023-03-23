@@ -127,13 +127,12 @@ class ReplayMemory:
             return [self.state_inputs, self.states, self.rewards, self.next_states, self.cost, self.actions]
         # indices = random.sample(range(0, self.curr_lens), self.batch_size)
         rand = random.randint(0, self.curr_lens-self.batch_size)
-        indices = range(rand, rand+self.batch_size)
-        batch_s = self.states[indices]
-        batch_sa = self.state_inputs[indices]
-        batch_a = self.actions[indices]
-        batch_r = self.rewards[indices]
-        batch_next_s = self.next_states[indices]
-        batch_c = self.cost[indices]
+        batch_s = self.states[rand:rand+self.batch_size]
+        batch_sa = self.state_inputs[rand:rand+self.batch_size]
+        batch_a = self.actions[rand:rand+self.batch_size]
+        batch_r = self.rewards[rand:rand+self.batch_size]
+        batch_next_s = self.next_states[rand:rand+self.batch_size]
+        batch_c = self.cost[rand:rand+self.batch_size]
         # batch_p = self.policy[indices]
         return batch_sa, batch_s, batch_r, batch_next_s, batch_c, batch_a
 
