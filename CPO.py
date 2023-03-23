@@ -125,7 +125,9 @@ class ReplayMemory:
     def sample(self):
         if self.curr_lens <= self.batch_size:
             return [self.state_inputs, self.states, self.rewards, self.next_states, self.cost, self.actions]
-        indices = random.sample(range(0, self.curr_lens), self.batch_size)
+        # indices = random.sample(range(0, self.curr_lens), self.batch_size)
+        rand = random.randint(0, self.curr_lens-self.batch_size)
+        indices = range(rand, rand+self.batch_size)
         batch_s = self.states[indices]
         batch_sa = self.state_inputs[indices]
         batch_a = self.actions[indices]
@@ -141,7 +143,7 @@ class CPO:
                  val_lr=1e-2, cost_lr=1e-2, max_constraint_val=0.1, val_small_loss=1e-3, cost_small_loss=1e-3,
                  discount_val=0.995, discount_cost=0.995, lambda_val=0.98, lambda_cost=0.98,
                  line_search_coefficient=0.9, line_search_max_iter=10, line_search_accept_ratio=0.1,
-                 continue_from_file=False, save_every=5, print_updates=True):
+                 continue_from_file=False, save_every=1, print_updates=True):
         # Actor
         self.policy = Actor(state_dim, action_dim)
         # Critic for value function
