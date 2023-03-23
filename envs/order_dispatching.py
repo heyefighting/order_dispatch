@@ -130,7 +130,6 @@ class DispatchPair:
         involved_shop = []
         delivery_efficiency = []
         shop_radio_sum = []
-        dispatch_efficiency = self.order.price
 
         for courier_id, courier in env.couriers_dict.items():
             if courier.online is True and courier.occur_time <= env.time_slot_index:
@@ -150,10 +149,11 @@ class DispatchPair:
                                                (work_time + int(env.time_slot_index - courier.occur_time + 1)))
                 else:
                     delivery_efficiency.append(0)
+                if courier_id == self.courier.courier_id:
+                    courier_efficiency = delivery_efficiency[-1]
 
         efficiency = torch.from_numpy(np.array(delivery_efficiency)).to(device)
-        dispatch_efficiency = np.mean(np.array(delivery_efficiency))
-        mean_efficiency = torch.tensor([dispatch_efficiency] * efficiency.shape[0]).to(device)
+        mean_efficiency = torch.tensor([np.mean(np.array(delivery_efficiency))] * efficiency.shape[0]).to(device)
         courier_fairness = Loss(efficiency, mean_efficiency).item()
 
         for shop in involved_shop:
@@ -179,5 +179,4 @@ class DispatchPair:
             shop_fairness = Loss(fairness, mean_fairness).item()
 
         # three parts: order price + courier fairness + shop fairness
-        # print(np.mean(np.array(delivery_efficiency)))
-        self.reward = (1 - alpha - beta) * dispatch_efficiency - alpha * courier_fairness - beta * shop_fairness
+        self.reward = (1 - alpha - beta) * courier_efficiency - alpha * courier_fairness - beta * shop_fairness
