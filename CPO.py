@@ -259,7 +259,7 @@ class CPO:
                 self.monitor.update(self.episode_num * n_step + i_step, self.mean_rewards[-1], self.mean_costs[-1])
 
             self.episode_num += 1
-            for _ in range(20):
+            for _ in range(10):
                 batch_state, batch_s, batch_reward, batch_next_s, batch_cost, batch_action = self.replay.sample()
 
                 J_cost = torch.sum(torch.tensor(batch_cost, dtype=torch.float32)).to(self.device)
