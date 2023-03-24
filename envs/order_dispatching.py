@@ -64,15 +64,14 @@ def process_memory(next_state, dispatch_result):
     for order, d_pair in dispatch_result.items():
         state_inputs.append(d_pair.state_input)
         states.append(d_pair.state)
-        actions.append(d_pair.action)
+        actions.append(int(d_pair.action))
         rewards.append(d_pair.reward)
-        costs.append(d_pair.cost)
+        costs.append(int(d_pair.cost))
         # policy.append(d_pair.policy)
         next_state = np.array(next_state.flatten())  # 更新后的路网特征
         next_state1 = np.hstack((next_state, d_pair.next_state))  # 骑手特征+路网特征:critic网络输入
         # next_state1 = get_next_state(next_state, next_courier_state)
         next_states.append(next_state1)
-
     return state_inputs, states, actions, rewards, next_states, costs  # , np.array(policy
 
 

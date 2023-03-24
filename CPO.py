@@ -238,7 +238,7 @@ class CPO:
                     d = DispatchPair(i_order, self.env.couriers_dict[id_list[c_id]])
                     d.set_state_input(state_input)  # [c_id]
                     d.set_state(state_couriers[c_id])  #
-                    d.set_action(c_id)  # action[c_id]
+                    d.set_action(c_id)  # int
                     d.set_reward(self.env, alpha, beta)
                     d.set_cost(wait_time[c_id])  # 0:不超时, 1:超时
                     d.set_policy(softmax_V[c_id].item())  # tensor转float
