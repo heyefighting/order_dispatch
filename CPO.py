@@ -188,9 +188,7 @@ class CPO:
     def take_action(self, state):
         state_ = torch.tensor(state, dtype=torch.float32)
         action_prob = self.policy(state_)
-        action_dist = torch.distributions.Categorical(action_prob)
-        # c_id_ = np.argmax(action_dist.sample().cpu())
-        c_id_ = action_dist.sample()
+        c_id_ = torch.distributions.Categorical(action_prob).sample()
         return c_id_.item()
 
     def train(self, n_episodes, n_step, alpha, beta):
