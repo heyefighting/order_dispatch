@@ -19,16 +19,30 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="076cd69b-a3d1-4af8-984a-557d53005b70" name="Default Changelist" comment="reward修改">
+    <list default="true" id="076cd69b-a3d1-4af8-984a-557d53005b70" name="Default Changelist" comment="[array()]bug修改">
+      <change afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CPO.py" beforeDir="false" afterPath="$PROJECT_DIR$/CPO.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/envs/couriers.py" beforeDir="false" afterPath="$PROJECT_DIR$/envs/couriers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/envs/customers.py" beforeDir="false" afterPath="$PROJECT_DIR$/envs/customers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/envs/envs.py" beforeDir="false" afterPath="$PROJECT_DIR$/envs/envs.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/envs/order_dispatching.py" beforeDir="false" afterPath="$PROJECT_DIR$/envs/order_dispatching.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/optimization_utils/line_search.py" beforeDir="false" afterPath="$PROJECT_DIR$/optimization_utils/line_search.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/envs/route_planning.py" beforeDir="false" afterPath="$PROJECT_DIR$/envs/route_planning.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/envs/shops.py" beforeDir="false" afterPath="$PROJECT_DIR$/envs/shops.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/optimization_utils/conjugate_gradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/optimization_utils/conjugate_gradient.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -42,7 +56,49 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="settings.editor.selected.configurable" value="project.propVCSSupport.Mappings" />
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.test">
+    <configuration name="CPO" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CMOMORL" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/CPO.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CMOMORL" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="train" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="CMOMORL" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -66,7 +122,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.test" />
         <item itemvalue="Python.train" />
+        <item itemvalue="Python.CPO" />
       </list>
     </recent_temporary>
   </component>
@@ -121,7 +179,14 @@
       <option name="project" value="LOCAL" />
       <updated>1679583507069</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="[array()]bug修改">
+      <created>1679630696562</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1679630696562</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -134,6 +199,7 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="float32减内存" />
@@ -141,44 +207,96 @@
     <MESSAGE value="更新次数and保存周期" />
     <MESSAGE value="TypeError: list indices must be integers or slices, not range" />
     <MESSAGE value="reward修改" />
-    <option name="LAST_COMMIT_MESSAGE" value="reward修改" />
+    <MESSAGE value="[array()]bug修改" />
+    <option name="LAST_COMMIT_MESSAGE" value="[array()]bug修改" />
   </component>
   <component name="WindowStateProjectService">
     <state x="96" y="35" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1679462422244">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
     <state x="96" y="35" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1280.760@0.0.1280.760" timestamp="1679462422244" />
-    <state width="1260" height="54" key="GridCell.Tab.0.bottom" timestamp="1679629167718">
+    <state width="1260" height="205" key="GridCell.Tab.0.bottom" timestamp="1679916766827">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
-    <state width="1260" height="54" key="GridCell.Tab.0.bottom/0.0.1280.760@0.0.1280.760" timestamp="1679629167718" />
-    <state width="1260" height="54" key="GridCell.Tab.0.center" timestamp="1679629167718">
+    <state width="1260" height="205" key="GridCell.Tab.0.bottom/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.0.center" timestamp="1679916766827">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
-    <state width="1260" height="54" key="GridCell.Tab.0.center/0.0.1280.760@0.0.1280.760" timestamp="1679629167718" />
-    <state width="1260" height="54" key="GridCell.Tab.0.left" timestamp="1679629167718">
+    <state width="1260" height="205" key="GridCell.Tab.0.center/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.0.left" timestamp="1679916766827">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
-    <state width="1260" height="54" key="GridCell.Tab.0.left/0.0.1280.760@0.0.1280.760" timestamp="1679629167718" />
-    <state width="1260" height="54" key="GridCell.Tab.0.right" timestamp="1679629167718">
+    <state width="1260" height="205" key="GridCell.Tab.0.left/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.0.right" timestamp="1679916766827">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
-    <state width="1260" height="54" key="GridCell.Tab.0.right/0.0.1280.760@0.0.1280.760" timestamp="1679629167718" />
+    <state width="1260" height="205" key="GridCell.Tab.0.right/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.1.bottom" timestamp="1679916766827">
+      <screen x="0" y="0" width="1280" height="760" />
+    </state>
+    <state width="1260" height="205" key="GridCell.Tab.1.bottom/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.1.center" timestamp="1679916766827">
+      <screen x="0" y="0" width="1280" height="760" />
+    </state>
+    <state width="1260" height="205" key="GridCell.Tab.1.center/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.1.left" timestamp="1679916766827">
+      <screen x="0" y="0" width="1280" height="760" />
+    </state>
+    <state width="1260" height="205" key="GridCell.Tab.1.left/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
+    <state width="1260" height="205" key="GridCell.Tab.1.right" timestamp="1679916766827">
+      <screen x="0" y="0" width="1280" height="760" />
+    </state>
+    <state width="1260" height="205" key="GridCell.Tab.1.right/0.0.1280.760@0.0.1280.760" timestamp="1679916766827" />
     <state x="142" y="25" key="SettingsEditor" timestamp="1679462065815">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
     <state x="142" y="25" key="SettingsEditor/0.0.1280.760@0.0.1280.760" timestamp="1679462065815" />
-    <state x="233" y="113" key="Vcs.Push.Dialog.v2" timestamp="1679583509621">
+    <state x="233" y="113" key="Vcs.Push.Dialog.v2" timestamp="1679630713649">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
-    <state x="233" y="113" key="Vcs.Push.Dialog.v2/0.0.1280.760@0.0.1280.760" timestamp="1679583509621" />
+    <state x="233" y="113" key="Vcs.Push.Dialog.v2/0.0.1280.760@0.0.1280.760" timestamp="1679630713649" />
+    <state width="646" height="386" key="XDebugger.FullValuePopup" timestamp="1679885489017">
+      <screen x="0" y="0" width="1280" height="760" />
+    </state>
+    <state width="646" height="386" key="XDebugger.FullValuePopup/0.0.1280.760@0.0.1280.760" timestamp="1679885489017" />
     <state x="448" y="293" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1679563211340">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
     <state x="448" y="293" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1280.760@0.0.1280.760" timestamp="1679563211340" />
-    <state x="306" y="85" width="672" height="678" key="search.everywhere.popup" timestamp="1679579246920">
+    <state x="307" y="86" width="672" height="678" key="search.everywhere.popup" timestamp="1679898361542">
       <screen x="0" y="0" width="1280" height="760" />
     </state>
-    <state x="306" y="85" width="672" height="678" key="search.everywhere.popup/0.0.1280.760@0.0.1280.760" timestamp="1679579246920" />
+    <state x="307" y="86" width="672" height="678" key="search.everywhere.popup/0.0.1280.760@0.0.1280.760" timestamp="1679898361542" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test.py</url>
+          <line>297</line>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test.py</url>
+          <line>298</line>
+          <option name="timeStamp" value="13" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test.py</url>
+          <line>212</line>
+          <option name="timeStamp" value="35" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test.py</url>
+          <line>219</line>
+          <option name="timeStamp" value="44" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="self.batch_size" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

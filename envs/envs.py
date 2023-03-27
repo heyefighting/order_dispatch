@@ -13,7 +13,7 @@ class Environment:
     __slots__ = (
         "M", "N", "n_valid_nodes", "valid_node_1d", "nodes", "state", "n_step",
         "time_slot_index", "day_orders", "n_couriers", "couriers_dict", "day_couriers",
-        "shops_init", "n_shops", "shops_dict", "users_init", "n_users", "users_dict")
+        "shops_init", "n_shops", "shops_dict", "involved_shop", "users_init", "n_users", "users_dict")
 
     def __init__(self, shop_data, valid_matrix, M, N, courier_num=4000):
         self.M = M
@@ -35,6 +35,7 @@ class Environment:
         self.shops_init = []  # 从shop_data提取出的shops, 在initialize_shops中初始化
         self.n_shops = 0
         self.shops_dict = {}  # key为商家location
+        self.involved_shop = []
 
         self.users_init = []  # 在initialize_users中初始化
         self.n_users = 0
@@ -64,8 +65,9 @@ class Environment:
             lon = np.random.uniform(121.4, 121.5)
             self.couriers_dict[_].set_latitude(lat)
             self.couriers_dict[_].set_longitude(lon)
-            self.couriers_dict[_].clean_order_num()
+            self.couriers_dict[_].clean_order()
             self.couriers_dict[_].clean_route()
+
             occur_time = 0
             if _ >= 3000:
                 occur_time = (self.time_slot_index + _) % 24
@@ -86,6 +88,7 @@ class Environment:
     def update_shops(self):
         for _, shop in self.shops_dict.items():
             self.shops_dict[_].increase_day_index()
+            self.shops_dict[_].clean_order_list()
 
     def initialize_orders(self, orders_data):
         self.day_orders = [[] for _ in range(self.n_step)]
@@ -122,7 +125,6 @@ class Environment:
     def update_env(self):
         self.time_slot_index = 0
         self.update_couriers()  # 重置courier_dict中骑手新的一天上线时间、出现位置、清空路线、工作天数+1
-        # self.initialize_couriers(self.n_couriers)  # 骑手收入不再累积, 故初始化
         self.update_shops()  # 商家运营天数+1
         self.generate_one_day_couriers()  # 按照重置的上线时间，重置self.day_couriers
 
@@ -195,9 +197,9 @@ class Environment:
                 self.day_couriers[self.time_slot_index].append(i_courier)
 
     def step_shop_state_update(self, shop_loc, user_loc, pickup_time, order_id):
-        for index, i_order in enumerate(self.shops_dict[shop_loc].order_list[self.shops_dict[shop_loc].day_index]):
+        for index, i_order in enumerate(self.shops_dict[shop_loc].order_list):
             if i_order.order_id == order_id:
-                self.shops_dict[shop_loc].order_list[self.shops_dict[shop_loc].day_index][index]. \
+                self.shops_dict[shop_loc].order_list[index]. \
                     set_order_pickup_time(pickup_time)
                 break
         for index, i_order in enumerate(self.users_dict[user_loc].order_list):
@@ -206,9 +208,9 @@ class Environment:
                 break
 
     def step_user_state_update(self, shop_loc, user_loc, deli_time, order_id):
-        for index, i_order in enumerate(self.shops_dict[shop_loc].order_list[self.shops_dict[shop_loc].day_index]):
+        for index, i_order in enumerate(self.shops_dict[shop_loc].order_list):
             if i_order.order_id == order_id:
-                self.shops_dict[shop_loc].order_list[self.shops_dict[shop_loc].day_index][index]. \
+                self.shops_dict[shop_loc].order_list[index]. \
                     set_order_delivery_time(deli_time)
                 self.shops_dict[shop_loc].cal_time_distance_ratio()
                 break
@@ -217,12 +219,6 @@ class Environment:
                 self.users_dict[user_loc].order_list[index].set_order_delivery_time(deli_time)
                 self.users_dict[user_loc].construct_wait_time()
                 break
-
-    def user_fairness_before_action(self, user_loc, delivery_time, order_id):
-        for index, i_order in enumerate(self.users_dict[user_loc].order_list):
-            if i_order.order_id == order_id:
-                return (delivery_time - self.users_dict[user_loc].order_list[index].get_order_create_time()) \
-                       * 5 - self.users_dict[user_loc].order_list[index].get_promise_delivery_duration()
 
     def step(self, dispatch_action):
         self.step_increase_time_slot_index()  # time_slot_index+1

@@ -23,9 +23,6 @@ class Customers(object):
         self.order_num = 0
         self.node = None
 
-        # self.initialize_order_creation(init_order)
-        # self.construct_wait_time()
-
     def initialize_order_creation(self, init_order):
         self.order_num = len(init_order)
         for i_order in init_order:

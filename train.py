@@ -8,8 +8,8 @@ from CPO import CPO
 from envs.envs import Environment
 from envs.order_dispatching import *
 
-use_cuda = torch.cuda.is_available()
-device = torch.device("cuda") if use_cuda else torch.device("cpu")
+# use_cuda = torch.cuda.is_available()
+# device = torch.device("cuda") if use_cuda else torch.device("cpu")
 
 if __name__ == '__main__':
     # setup the environment
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     line_search_accept_ratio = 0.1  # 用于loss下降判断 ratio=actual_improve/expected_improve
 
     cpo = CPO(state_dim=state_size, action_dim=action_size, simulator=environment, capacity=capacity, batch_size=batch,
-              device=device, max_kl=max_kl, val_lr=val_lr, cost_lr=cost_lr, max_constraint_val=max_constraint_val,
+              max_kl=max_kl, val_lr=val_lr, cost_lr=cost_lr, max_constraint_val=max_constraint_val,
               val_small_loss=1e-3, cost_small_loss=1e-3,
               discount_val=discount_val, discount_cost=discount_cost,
               lambda_val=lambda_val, lambda_cost=lambda_cost,

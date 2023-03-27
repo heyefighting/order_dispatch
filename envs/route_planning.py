@@ -66,14 +66,14 @@ class Route:
             self.route_distance += loc_dis
             if self.available_flag[loc_id] == 1:  # 下一站是商家
                 if flag:
-                    courier.order_list[courier.work_day_index][loc_id].set_order_pickup_time(self.time_list[-1])
+                    courier.order_list[loc_id].set_order_pickup_time(self.time_list[-1])
                     env.step_shop_state_update(self.shop_loc[loc_id], self.user_loc[loc_id],
                                                self.time_list[-1], self.order_id[loc_id])  # 找到对应的商家、用户更新
                 self.available_loc[loc_id] = self.user_loc[loc_id]  # 只有取到餐才能去送给用户，这时用户的经纬度才能放到available_loc中
                 self.available_flag[loc_id] = 2
             elif self.available_flag[loc_id] == 2:  # 下一站是用户
                 if flag:
-                    courier.order_list[courier.work_day_index][loc_id].set_order_delivery_time(self.time_list[-1])
+                    courier.order_list[loc_id].set_order_delivery_time(self.time_list[-1])
                     env.step_user_state_update(self.shop_loc[loc_id], self.user_loc[loc_id],
                                                self.time_list[-1], self.order_id[loc_id])
                 else:

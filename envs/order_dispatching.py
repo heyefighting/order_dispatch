@@ -6,13 +6,13 @@ description:
 import torch
 import numpy as np
 
-use_cuda = torch.cuda.is_available()
+use_cuda = False  # torch.cuda.is_available()
 
-device = torch.device("cuda") if use_cuda else torch.device("cpu")
-FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
-LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
-ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
-Tensor = FloatTensor
+# device = torch.device("cuda") if use_cuda else torch.device("cpu")
+# FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
+# LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
+# ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
+# Tensor = FloatTensor
 
 
 def get_courier_state(env, state, couriers):
@@ -86,7 +86,7 @@ class DispatchPair:
         self.action = None
         self.reward = 0  # float
         self.cost = None
-        self.policy = None
+        # self.policy = None
         self.next_action = None
 
     def set_index(self, index):
@@ -118,63 +118,52 @@ class DispatchPair:
         else:
             self.cost = 1
 
-    def set_policy(self, policy):
-        self.policy = policy
+    # def set_policy(self, policy):
+    #     self.policy = policy
 
     def get_reward(self):
         return self.reward
 
     def set_reward(self, env, alpha, beta):
         Loss = torch.nn.MSELoss()
-        involved_shop = []
         delivery_efficiency = []
         shop_radio_sum = []
+        courier_efficiency = 0.0
 
         for courier_id, courier in env.couriers_dict.items():
             if courier.online is True and courier.occur_time <= env.time_slot_index:
-                delivery_fee = []
-                for i in range(courier.work_day_index + 1):
-                    if len(courier.order_list[i]):
-                        for order in courier.order_list[i]:
-                            if env.shops_dict[order.shop_loc] not in involved_shop:
-                                involved_shop.append(env.shops_dict[order.shop_loc])
-                            delivery_fee.append(order.price)  # 订单效益
+                delivery_fee = 0.0
+                if len(courier.order_list):
+                    for order in courier.order_list:
+                        if env.shops_dict[order.shop_loc] not in env.involved_shop:
+                            env.involved_shop.append(env.shops_dict[order.shop_loc])
+                        delivery_fee += order.price  # 订单效益
 
-                if len(delivery_fee) != 0:
-                    work_time = 0
-                    for t in courier.work_day:  # 时间步为单位
-                        work_time += t
-                    delivery_efficiency.append(sum(delivery_fee) /
-                                               (work_time + int(env.time_slot_index - courier.occur_time + 1)))
+                if delivery_fee != 0.0:
+                    total_fee = env.couriers_dict[courier_id].sum_fee + delivery_fee
+                    work_time = env.couriers_dict[courier_id].work_day + int(env.time_slot_index - courier.occur_time + 1)
+                    delivery_efficiency.append(total_fee / work_time)
                 else:
                     delivery_efficiency.append(0)
                 if courier_id == self.courier.courier_id:
                     courier_efficiency = delivery_efficiency[-1]
 
-        efficiency = torch.from_numpy(np.array(delivery_efficiency)).to(device)
-        mean_efficiency = torch.tensor([np.mean(np.array(delivery_efficiency))] * efficiency.shape[0]).to(device)
+        efficiency = torch.from_numpy(np.array(delivery_efficiency))
+        mean_efficiency = torch.tensor([np.mean(np.array(delivery_efficiency))] * efficiency.shape[0])
         courier_fairness = Loss(efficiency, mean_efficiency).item()
 
-        for shop in involved_shop:
+        for shop in env.involved_shop:
             shopRadioMean = 0
-            num = 0
             for r in shop.order_time_distance_radio:
                 if r:
-                    for rr in r:
-                        num += 1
-                        shopRadioMean += rr
-            # r = shop.order_time_distance_radio[shop.day_index]  # 不累计
-            # if r:
-            #     for rr in r:
-            #         num += 1
-            #         shopRadioMean += rr
-            if shopRadioMean != 0:
-                shop_radio_sum.append(shopRadioMean / num)
+                    shopRadioMean += r[0]
+            # if shopRadioMean != 0:
+            shop_radio_sum.append(shopRadioMean / shop.order_num)
         if len(shop_radio_sum) == 0:
             shop_fairness = 0
         else:
-            fairness = torch.from_numpy(np.array(shop_radio_sum)).to(device)
-            mean_fairness = torch.tensor([np.mean(np.array(shop_radio_sum))] * fairness.shape[0]).to(device)
+            fairness = torch.from_numpy(np.array(shop_radio_sum))
+            mean_fairness = torch.tensor([np.mean(np.array(shop_radio_sum))] * fairness.shape[0])
             shop_fairness = Loss(fairness, mean_fairness).item()
 
         # three parts: order price + courier fairness + shop fairness

@@ -1,15 +1,23 @@
 """
 owner: Zou ying Cao
-data: 2023-02-15
-description: Constrained Policy Optimization
+data: 2023-03-26
+description: test the memory
 """
+import pandas as pd
 import gc
-import sys
+# from CPO import CPO
+from envs.envs import Environment
+from envs.order_dispatching import *
+
+use_cuda = False  # torch.cuda.is_available()
+device = torch.device("cuda") if use_cuda else torch.device("cpu")
+
 import random
 import pandas as pd
 from monitor import Monitor
 from torch.nn import MSELoss
 from models import Actor, Critic
+from datetime import datetime as dt, timedelta
 
 from env_utils.neighbours import *
 from envs.order_dispatching import *
@@ -88,6 +96,14 @@ class ReplayMemory:
             # self.policy = p
 
         elif self.curr_lens + len(s) <= self.memory_size:  # len(s)=s.shape[0]
+            # self.states = np.concatenate((self.states, s), axis=0)
+            # self.state_inputs = np.concatenate((self.state_inputs, sa), axis=0)
+            # self.next_states = np.concatenate((self.next_states, next_s), axis=0)
+            # self.actions = np.concatenate((self.actions, a), axis=0)
+            # self.rewards = np.concatenate((self.rewards, r), axis=0)
+            # self.curr_lens = self.states.shape[0]
+            # self.cost = np.concatenate((self.cost, c), axis=0)
+            # self.policy = np.concatenate((self.policy, p), axis=0)
             self.states.extend(s)
             self.state_inputs.extend(sa)
             self.next_states.extend(next_s)
@@ -119,19 +135,19 @@ class ReplayMemory:
         if self.curr_lens <= self.batch_size:
             return [self.state_inputs, self.states, self.rewards, self.next_states, self.cost, self.actions]
         # indices = random.sample(range(0, self.curr_lens), self.batch_size)
-        rand = random.randint(0, self.curr_lens - self.batch_size)
-        batch_s = self.states[rand:rand + self.batch_size]
-        batch_sa = self.state_inputs[rand:rand + self.batch_size]
-        batch_a = self.actions[rand:rand + self.batch_size]
-        batch_r = self.rewards[rand:rand + self.batch_size]
-        batch_next_s = self.next_states[rand:rand + self.batch_size]
-        batch_c = self.cost[rand:rand + self.batch_size]
+        rand = random.randint(0, self.curr_lens-self.batch_size)
+        batch_s = self.states[rand:rand+self.batch_size]
+        batch_sa = self.state_inputs[rand:rand+self.batch_size]
+        batch_a = self.actions[rand:rand+self.batch_size]
+        batch_r = self.rewards[rand:rand+self.batch_size]
+        batch_next_s = self.next_states[rand:rand+self.batch_size]
+        batch_c = self.cost[rand:rand+self.batch_size]
         # batch_p = self.policy[indices]
         return batch_sa, batch_s, batch_r, batch_next_s, batch_c, batch_a
 
 
 class CPO:
-    def __init__(self, state_dim, action_dim, capacity, batch_size, simulator, max_kl=1e-2,
+    def __init__(self, state_dim, action_dim, capacity, batch_size, simulator, device, max_kl=1e-2,
                  val_lr=1e-2, cost_lr=1e-2, max_constraint_val=0.1, val_small_loss=1e-3, cost_small_loss=1e-3,
                  discount_val=0.995, discount_cost=0.995, lambda_val=0.98, lambda_cost=0.98,
                  line_search_coefficient=0.9, line_search_max_iter=10, line_search_accept_ratio=0.1,
@@ -169,6 +185,7 @@ class CPO:
         self.value_optimizer = torch.optim.Adam(self.value_function.parameters(), lr=val_lr)
         self.cost_optimizer = torch.optim.Adam(self.value_function.parameters(), lr=cost_lr)
 
+        self.device = device
         self.save_every = save_every
         self.print_updates = print_updates
         self.monitor = Monitor(train=True, spec="CMO_RL_Dispatch")
@@ -188,31 +205,22 @@ class CPO:
     def take_action(self, state):
         state_ = torch.tensor(state, dtype=torch.float32)
         action_prob = self.policy(state_)
-        action_dist = torch.distributions.Categorical(action_prob)
-        # c_id_ = np.argmax(action_dist.sample().cpu())
-        c_id_ = action_dist.sample()
+        c_id_ = torch.distributions.Categorical(action_prob).sample()
         return c_id_.item()
 
     def train(self, n_episodes, n_step, alpha, beta):
-        trajectory_value_loss = []
-        trajectory_cost_loss = []
+
         while self.episode_num < n_episodes:
             fileName = "datasets/orderData" + str(self.episode_num + 1) + ".csv"
             orders_data = pd.read_csv(fileName)
             self.env.reset_env(orders_data)  # 出现新的订单与用户
-            del orders_data
-            gc.collect()
 
-            trajectory_value_loss.clear()
-            trajectory_cost_loss.clear()
-            dispatch_action = {}
-            trajectory_rewards = []
-            trajectory_costs = []
-
+            trajectory_value_loss = []
+            trajectory_cost_loss = []
             for i_step in range(1, n_step + 1):
-                dispatch_action.clear()
-                trajectory_rewards.clear()
-                trajectory_costs.clear()
+                dispatch_action = {}
+                trajectory_rewards = []
+                trajectory_costs = []
                 for i_order in self.env.day_orders[self.env.time_slot_index]:
                     self.env.users_dict[i_order.user_loc].create_order(i_order)  # 用户下单
                     self.env.set_node_one_order(i_order)  # 商家所在路网节点订单+1
@@ -226,7 +234,7 @@ class CPO:
                         id_list, couriers, wait_time, action = self.env.more_action_collect(2, x, y, i_order, order_num)
                     state_couriers = get_courier_state(self.env, state, couriers)
                     state_input = get_state_input(state_couriers, action)  # state, action拼接
-                    c_id = self.take_action(state_input)  # , softmax_V
+                    c_id = self.take_action(state_input)
 
                     i_order.set_order_accept_time(self.env.time_slot_index)  # 订单设置接单时间
                     self.env.shops_dict[i_order.shop_loc].add_order(i_order)  # 相应商家order_list添加该订单
@@ -331,8 +339,8 @@ class CPO:
         Fvp_fun = get_Hvp_fun(mean_kl, self.policy.parameters())  # 返回的是一个函数：用于计算黑塞矩阵和一个向量的乘积
 
         # 用共轭梯度法计算x = H^(-1)g
-        F_inv_g = cg_solver(Fvp_fun, reward_grad)  # F_inv_g = H^(-1)g, g是目标函数的梯度
-        F_inv_b = cg_solver(Fvp_fun, constraint_grad)  # F_inv_b = H^(-1)B, bi是第i个约束的梯度
+        F_inv_g = cg_solver(Fvp_fun, reward_grad, self.device)  # F_inv_g = H^(-1)g, g是目标函数的梯度
+        F_inv_b = cg_solver(Fvp_fun, constraint_grad, self.device)  # F_inv_b = H^(-1)B, bi是第i个约束的梯度
 
         q = torch.matmul(reward_grad, F_inv_g)  # q = g^T*H^(-1)g
         c = (J_c - self.max_constraint_val)  # c = J_c(π_k) − d
@@ -400,7 +408,6 @@ class CPO:
                 return loss_cond and cost_cond and kl_cond
 
             return cost_cond and kl_cond
-
         # 若十步内找不到合适的参数, step_len就返回0, 即参数不变
         step_len = line_search(search_dir, 1.0, line_search_criterion,
                                self.line_search_coefficient, self.line_search_max_iter)
@@ -409,6 +416,9 @@ class CPO:
 
     def update_Critic(self, critic, optimizer, states, targets, small_value, loss_record):
         critic.train()
+
+        # states = states.to(self.device)
+        # targets = targets.to(self.device)
 
         def mse():
             optimizer.zero_grad()
@@ -510,3 +520,50 @@ class CPO:
         update_message = '[Episode]: {0} | [Avg. Reward]: {1} | [Avg. Cost]: {2}'
         format_args = (self.episode_num, self.mean_rewards[-1], self.mean_costs[-1])
         print(update_message.format(*format_args))
+
+
+if __name__ == '__main__':
+    # setup the environment
+    shop_data = pd.read_csv("shopInitialization.csv")  # 从30天数据中提取出来的相关商家（包括经纬度、所在路网网格ID）
+    mapped_matrix_int = np.arange(0, 100, 1).reshape([10, 10])  # 用一个矩形来网格化配送地图，不可送达地（湖泊、海洋等）标记-1
+    environment = Environment(shop_data, mapped_matrix_int, 10, 10)
+
+    # get state / action size
+    state_size = environment.n_valid_nodes * 3 + 4
+    action_size = 7 + 40  # 起点、终点(经度, 纬度), cost, 距离, 同节点订单数目, route
+    batch = int(5e+2)  # 5*10^2=500, 每次取出500条经验来更新网络
+    capacity = int(1e+6)  # 1.0*10^6=1000000, 经验池的capacity
+
+    # config
+    max_kl = 1e-2  # 最大KL距离约束（新旧策略更新的KL距离差距）同TRPO算法 0.01
+    max_constraint_val = batch*0.05  # 超时率5%
+    val_lr = 1e-2  # Adm优化器学习率 Critic网络
+    cost_lr = 1e-2
+    val_small_loss = 1e-3  # 在进行参数更新时,学习速率要除以这个积累量的平方根,其中加上一个很小值是为了防止除0的出现
+    cost_small_loss = 1e-3
+
+    discount_val = 0.995  # gamma for discounted reward
+    discount_cost = 0.995  # gamma for discounted cost
+    lambda_val = 0.98  # GAE中：当λ=0时, GAE的形式就是TD误差的形式, 有偏差, 但方差小
+    lambda_cost = 0.98  # λ=1时就是蒙特卡洛的形式, 无偏差, 但是方差大
+
+    line_search_max_iter = 10  # 线搜索的次数
+    line_search_coefficient = 0.9  # 步长的衰减率（每次搜索时）
+    line_search_accept_ratio = 0.1  # 用于loss下降判断 ratio=actual_improve/expected_improve
+
+    cpo = CPO(state_dim=state_size, action_dim=action_size, simulator=environment, capacity=capacity, batch_size=batch,
+              device=device, max_kl=max_kl, val_lr=val_lr, cost_lr=cost_lr, max_constraint_val=max_constraint_val,
+              val_small_loss=1e-3, cost_small_loss=1e-3,
+              discount_val=discount_val, discount_cost=discount_cost,
+              lambda_val=lambda_val, lambda_cost=lambda_cost,
+              line_search_max_iter=line_search_max_iter,
+              line_search_coefficient=line_search_coefficient,
+              line_search_accept_ratio=line_search_accept_ratio)
+
+    # for train
+    n_episodes = 30
+    n_steps = 168  # 一天内
+    alpha = 0.3  # reward中骑手公平的权重
+    beta = 0.3  # reward中商家公平的权重
+
+    cpo.train(n_episodes, n_steps, alpha, beta)

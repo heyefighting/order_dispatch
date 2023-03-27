@@ -6,7 +6,7 @@ description:共轭梯度法计算x=(H^-1)*g，避免计算和存储黑塞矩阵�
 import torch
 
 
-def cg_solver(Avp_fun, b, device, max_iter=10):
+def cg_solver(Avp_fun, b, max_iter=10):
     """
     Finds an approximate solution to a set of linear equations Ax = b
     Parameters
@@ -25,9 +25,7 @@ def cg_solver(Avp_fun, b, device, max_iter=10):
         the approximate solution to the system of equations defined by Avp_fun and b
 
     """
-
-    device = device
-    x = torch.zeros_like(b).to(device)  # x0=0
+    x = torch.zeros_like(b)  # x0=0
     r = b.clone()  # r0=g,梯度grad
     p = b.clone()  # p0=r0
     rdotr = torch.matmul(r, r)
