@@ -69,11 +69,9 @@ class ReplayMemory:
         self.rewards = None
         self.next_states = None
         self.cost = None
-        # self.policy = None
 
         self.batch_size = batch_size
         self.memory_size = memory_size
-        self.current = 0
         self.curr_lens = 0
 
     def add(self, sa, s, a, r, next_s, c):
@@ -85,7 +83,6 @@ class ReplayMemory:
             self.next_states = next_s
             self.curr_lens = len(self.states)
             self.cost = c
-            # self.policy = p
 
         elif self.curr_lens + len(s) <= self.memory_size:  # len(s)=s.shape[0]
             self.states.extend(s)
@@ -97,28 +94,26 @@ class ReplayMemory:
             self.cost.extend(c)
         else:
             new_sample_lens = len(s)
-            reserve_lens = self.memory_size - new_sample_lens
+            popLength = list(range(0, new_sample_lens))
 
-            self.states[0:reserve_lens] = self.states[self.curr_lens - reserve_lens:self.curr_lens]
-            self.state_inputs[0:reserve_lens] = self.state_inputs[self.curr_lens - reserve_lens:self.curr_lens]
-            self.actions[0:reserve_lens] = self.actions[self.curr_lens - reserve_lens:self.curr_lens]
-            self.rewards[0:reserve_lens] = self.rewards[self.curr_lens - reserve_lens:self.curr_lens]
-            self.next_states[0:reserve_lens] = self.next_states[self.curr_lens - reserve_lens:self.curr_lens]
-            self.cost[0:reserve_lens] = self.cost[self.curr_lens - reserve_lens:self.curr_lens]
-            # self.policy[0:reserve_lens] = self.policy[self.curr_lens - reserve_lens:self.curr_lens]
+            self.states.pop(popLength)
+            self.state_inputs.pop(popLength)
+            self.actions.pop(popLength)
+            self.rewards.pop(popLength)
+            self.next_states.pop(popLength)
+            self.cost.pop(popLength)
 
-            self.states[self.curr_lens: self.memory_size] = s
-            self.state_inputs[self.curr_lens: self.memory_size] = sa
-            self.actions[self.curr_lens: self.memory_size] = a
-            self.rewards[self.curr_lens: self.memory_size] = r
-            self.next_states[self.curr_lens: self.memory_size] = next_s
-            self.cost[self.curr_lens: self.memory_size] = c
-            # self.policy[self.curr_lens: self.memory_size] = p
+            self.states.extend(s)
+            self.state_inputs.extend(sa)
+            self.next_states.extend(next_s)
+            self.actions.extend(a)
+            self.rewards.extend(r)
+            self.cost.extend(c)
 
     def sample(self):
         if self.curr_lens <= self.batch_size:
             return [self.state_inputs, self.states, self.rewards, self.next_states, self.cost, self.actions]
-        # indices = random.sample(range(0, self.curr_lens), self.batch_size)
+
         rand = random.randint(0, self.curr_lens - self.batch_size)
         batch_s = self.states[rand:rand + self.batch_size]
         batch_sa = self.state_inputs[rand:rand + self.batch_size]
@@ -126,7 +121,7 @@ class ReplayMemory:
         batch_r = self.rewards[rand:rand + self.batch_size]
         batch_next_s = self.next_states[rand:rand + self.batch_size]
         batch_c = self.cost[rand:rand + self.batch_size]
-        # batch_p = self.policy[indices]
+
         return batch_sa, batch_s, batch_r, batch_next_s, batch_c, batch_a
 
 
@@ -238,7 +233,6 @@ class CPO:
                     d.set_action(c_id)  # int
                     d.set_reward(self.env, alpha, beta)
                     d.set_cost(wait_time[c_id])  # 0:不超时, 1:超时
-                    # d.set_policy(softmax_V[c_id].item())  # tensor转float
                     trajectory_rewards.append(d.reward)
                     trajectory_costs.append(d.cost)
                     dispatch_action[i_order] = d

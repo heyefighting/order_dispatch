@@ -259,8 +259,6 @@ class CPO:
                     state_inputs, states, actions, rewards, next_states, costs = process_memory(
                         self.env.state, dispatch_result)
                     self.replay.add(state_inputs, states, actions, rewards, next_states, costs)
-                    del dispatch_result, state_couriers, state_input, couriers, state, wait_time, action
-                    gc.collect()
 
                 self.mean_rewards.append(torch.mean(torch.Tensor(trajectory_rewards)))
                 self.mean_costs.append(torch.mean(torch.Tensor(trajectory_costs)))
