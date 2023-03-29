@@ -15,7 +15,7 @@ class Environment:
         "time_slot_index", "day_orders", "n_couriers", "couriers_dict", "day_couriers",
         "shops_init", "n_shops", "shops_dict", "involved_shop", "users_init", "n_users", "users_dict")
 
-    def __init__(self, shop_data, valid_matrix, M, N, courier_num=4000):
+    def __init__(self, shop_data, valid_matrix, M, N, courier_num=200):
         self.M = M
         self.N = N
         self.n_valid_nodes = M * N  # 有效配送的网格个数
@@ -52,8 +52,8 @@ class Environment:
             lat = np.random.uniform(31.2, 31.3)
             lon = np.random.uniform(121.4, 121.5)
             occur_time = 0
-            if i >= 3000:
-                occur_time = (self.time_slot_index + i) % 24
+            # if i >= 75:
+            #     occur_time = (self.time_slot_index + i) % 24
             c = Couriers(int(i + 1), lat, lon, occur_time)
             c.set_node(self.nodes[gps_to_id(lat, lon)])
             self.couriers_dict[c.courier_id] = c
@@ -69,8 +69,8 @@ class Environment:
             self.couriers_dict[_].clean_route()
 
             occur_time = 0
-            if _ >= 3000:
-                occur_time = (self.time_slot_index + _) % 24
+            # if _ >= 75:
+            #     occur_time = (self.time_slot_index + _) % 24
             self.couriers_dict[_].set_occur_time(occur_time)
             self.couriers_dict[_].set_record_time_slot(occur_time)
             self.couriers_dict[_].set_node(self.nodes[gps_to_id(lat, lon)])
