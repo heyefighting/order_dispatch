@@ -7,7 +7,6 @@ import gc
 import sys
 import random
 import pandas as pd
-from monitor import Monitor
 from torch.nn import MSELoss
 from models import Actor, Critic
 
@@ -93,15 +92,14 @@ class ReplayMemory:
             self.curr_lens = len(self.states)
             self.cost.extend(c)
         else:
-            new_sample_lens = len(s)
-            popLength = list(range(0, new_sample_lens))
-
-            self.states.pop(popLength)
-            self.state_inputs.pop(popLength)
-            self.actions.pop(popLength)
-            self.rewards.pop(popLength)
-            self.next_states.pop(popLength)
-            self.cost.pop(popLength)
+            # popLength = list(range(len(s)))
+            for i in range(len(s)):
+                self.states.pop(i)
+                self.state_inputs.pop(i)
+                self.actions.pop(i)
+                self.rewards.pop(i)
+                self.next_states.pop(i)
+                self.cost.pop(i)
 
             self.states.extend(s)
             self.state_inputs.extend(sa)
@@ -126,7 +124,7 @@ class ReplayMemory:
 
 
 class CPO:
-    def __init__(self, state_dim, action_dim, capacity, batch_size, simulator, max_kl=1e-2,
+    def __init__(self, state_dim, action_dim, capacity, batch_size, simulator, Monitor, max_kl=1e-2,
                  val_lr=1e-2, cost_lr=1e-2, max_constraint_val=0.1, val_small_loss=1e-3, cost_small_loss=1e-3,
                  discount_val=0.995, discount_cost=0.995, lambda_val=0.98, lambda_cost=0.98,
                  line_search_coefficient=0.9, line_search_max_iter=10, line_search_accept_ratio=0.1,
@@ -166,7 +164,7 @@ class CPO:
 
         self.save_every = save_every
         self.print_updates = print_updates
-        self.monitor = Monitor(train=True, spec="CMO_RL_Dispatch")
+        self.monitor = Monitor
 
         self.mean_rewards = []
         self.mean_costs = []
@@ -180,11 +178,15 @@ class CPO:
         # self.value_function.to(device)
         # self.cost_function.to(device)
 
-    def take_action(self, state):
+    def take_action(self, state, epsilon):
         state_ = torch.tensor(state, dtype=torch.float32)
         action_prob = self.policy(state_)
-        c_id_ = torch.distributions.Categorical(action_prob).sample()
-        return c_id_.item()
+        if np.random.random() < epsilon:
+            c_id = torch.distributions.Categorical(action_prob).sample().item()
+        else:
+            maxi = max(action_prob)
+            c_id = random.choice([index for index, t in enumerate(action_prob) if t == maxi])
+        return c_id
 
     def train(self, n_episodes, n_step, alpha, beta):
         trajectory_value_loss = []
@@ -216,39 +218,48 @@ class CPO:
 
                     id_list, couriers, wait_time, action = self.env.action_collect(x, y, i_order, order_num)
                     if len(couriers) == 0:  # 8邻域无可用的骑手, 多一层邻域查找
-                        id_list, couriers, wait_time, action = self.env.more_action_collect(2, x, y, i_order, order_num)
-                    state_couriers = get_courier_state(self.env, state, couriers)
-                    state_input = get_state_input(state_couriers, action)  # state, action拼接
-                    c_id = self.take_action(state_input)  # , softmax_V
+                        for layer in range(6):
+                            id_list, couriers, wait_time, action = self.env.more_action_collect(layer + 2, x, y,
+                                                                                                i_order, order_num)
+                            if len(couriers):
+                                break
+                    if len(couriers):
+                        state_couriers = get_courier_state(self.env, state, couriers)
+                        state_input = get_state_input(state_couriers, action)  # state, action拼接
+                        # c_id = self.take_action(state_input)  # , softmax_V
+                        c_id = self.take_action(state_input, 0.01)  # , softmax_V
 
-                    i_order.set_order_accept_time(self.env.time_slot_index)  # 订单设置接单时间
-                    self.env.shops_dict[i_order.shop_loc].add_order(i_order)  # 相应商家order_list添加该订单
-                    # courier部分状态更新包含num_order与接待订单的时间点属性
-                    self.env.couriers_dict[id_list[c_id]].take_order(i_order, self.env)
-                    self.env.nodes[i_order.begin_p].order_num -= 1
+                        i_order.set_order_accept_time(self.env.time_slot_index)  # 订单设置接单时间
+                        self.env.shops_dict[i_order.shop_loc].add_order(i_order)  # 相应商家order_list添加该订单
+                        # courier部分状态更新包含num_order与接待订单的时间点属性
+                        self.env.couriers_dict[id_list[c_id]].take_order(i_order, self.env)
+                        self.env.nodes[i_order.begin_p].order_num -= 1
 
-                    d = DispatchPair(i_order, self.env.couriers_dict[id_list[c_id]])
-                    d.set_state_input(state_input)  # [c_id]
-                    d.set_state(state_couriers[c_id])  #
-                    d.set_action(c_id)  # int
-                    d.set_reward(self.env, alpha, beta)
-                    d.set_cost(wait_time[c_id])  # 0:不超时, 1:超时
-                    trajectory_rewards.append(d.reward)
-                    trajectory_costs.append(d.cost)
-                    dispatch_action[i_order] = d
+                        d = DispatchPair(i_order, self.env.couriers_dict[id_list[c_id]])
+                        d.set_state_input(state_input)  # [c_id]
+                        d.set_state(state_couriers[c_id])  #
+                        d.set_action(c_id)  # int
+                        d.set_reward(self.env, alpha, beta)
+                        d.set_cost(wait_time[c_id])  # 0:不超时, 1:超时
+                        trajectory_rewards.append(d.reward)
+                        trajectory_costs.append(d.cost)
+                        dispatch_action[i_order] = d
+                    else:
+                        if self.env.time_slot_index != 167:
+                            self.env.day_orders[self.env.time_slot_index + 1].append(i_order)  # 放到下一时刻再分配
+                        else:
+                            print('one order dismissed')
 
-                dispatch_result = self.env.step(dispatch_action)  # state为路网的next_state
-
-                if len(dispatch_result) != 0:
+                if len(dispatch_action):
+                    dispatch_result = self.env.step(dispatch_action)  # state为路网的next_state
                     state_inputs, states, actions, rewards, next_states, costs = process_memory(
                         self.env.state, dispatch_result)
                     self.replay.add(state_inputs, states, actions, rewards, next_states, costs)
-                    del dispatch_result, state_couriers, state_input, couriers, state, wait_time, action
-                    gc.collect()
 
-                self.mean_rewards.append(torch.mean(torch.Tensor(trajectory_rewards)))
-                self.mean_costs.append(torch.mean(torch.Tensor(trajectory_costs)))
-                self.monitor.update(self.episode_num * n_step + i_step, self.mean_rewards[-1], self.mean_costs[-1])
+                    self.mean_rewards.append(torch.mean(torch.Tensor(trajectory_rewards)))
+                    self.mean_costs.append(torch.mean(torch.Tensor(trajectory_costs)))
+                    self.monitor.update_reward(self.episode_num * n_step + i_step, self.mean_rewards[-1])
+                    self.monitor.update_cost(self.episode_num * n_step + i_step, self.mean_costs[-1])
 
             self.episode_num += 1
             for _ in range(10):
@@ -346,6 +357,7 @@ class CPO:
 
             if is_feasible:  # 对偶解法
                 lam, nu = self.calc_dual_vars(q, r, s, c)  # dual_vars: 对偶问题最优解(整数规划一般不考虑对偶问题的最优解)
+                print('lam, nu', lam, nu)
                 search_dir = -(1 / (lam + EPS)) * (F_inv_g + nu * F_inv_b)  # 1/lam*(H^(-1)g-H^(-1)B*nu)
             else:
                 search_dir = -torch.sqrt(
@@ -381,7 +393,7 @@ class CPO:
 
                 # 判断cost是否在范围内
                 cost_cond = step_length * torch.matmul(constraint_grad, search_direction) <= max(-c, 0.0)
-
+                print('test_dists', test_dists)
                 # 判断kl散度是否在范围内
                 test_kl = mean_kl_first_fixed(action_dists.detach(), test_dists)  # 新旧策略之间的KL距离
                 kl_cond = (test_kl <= self.max_kl)
@@ -393,6 +405,7 @@ class CPO:
 
             return cost_cond and kl_cond
 
+        print('search_dir', search_dir)
         # 若十步内找不到合适的参数, step_len就返回0, 即参数不变
         step_len = line_search(search_dir, 1.0, line_search_criterion,
                                self.line_search_coefficient, self.line_search_max_iter)
