@@ -13,63 +13,71 @@ class Monitor(object):
         self.vis = visdom.Visdom()
         self.train = train
         self.spec = spec
+        self.value_window = self.vis.line(
+            X=torch.zeros((1,)).cpu(),
+            Y=torch.zeros(1).cpu(),  # torch.zeros((1))
+            opts=dict(xlabel='step',
+                      ylabel='reward',
+                      title='Value_Dynamics_' + self.spec,
+                      legend=['reward']))
+        self.cost_window = None
         if self.train:
             self.value_loss_window = self.vis.line(
                 X=torch.zeros((1,)).cpu(),
                 Y=torch.zeros(1).cpu(),  # torch.zeros((1))
                 opts=dict(xlabel='episode',
                           ylabel='mle loss for value Critic Network',
-                          title='Training Loss' + spec,
+                          title='Value_Critic_Loss_' + spec,
                           legend=['Loss']))
-            self.cost_loss_window = self.vis.line(
-                X=torch.zeros((1,)).cpu(),
-                Y=torch.zeros(1).cpu(),  # torch.zeros((1))
-                opts=dict(xlabel='episode',
-                          ylabel='mle loss for cost Critic Network',
-                          title='Training Loss' + spec,
-                          legend=['Loss']))
+            self.cost_loss_window = None
         self.log_file = None
-        self.value_window = None
-        self.cost_window = None
         self.text_window = None
 
-    def update(self, step, reward, cost):
-        if self.value_window is None:
-            self.value_window = self.vis.line(X=torch.Tensor([step]).cpu(),
-                                              Y=torch.Tensor([reward]).cpu(),
-                                              opts=dict(xlabel='step',
-                                                        ylabel='reward',
-                                                        title='Value Dynamics' + self.spec,
-                                                        legend=['reward']))
-            self.cost_window = self.vis.line(X=torch.Tensor([step]).cpu(),
-                                             Y=torch.Tensor([cost]).cpu(),
-                                             opts=dict(xlabel='step',
-                                                       ylabel='cost',
-                                                       title='Cost Dynamics' + self.spec,
-                                                       legend=['cost']))
-        else:
-            self.vis.line(
-                X=torch.Tensor([step]).cpu(),
-                Y=torch.Tensor([reward]).cpu(),
-                win=self.value_window,
-                update='append')
-            self.vis.line(
+    def update_reward(self, step, reward):
+        self.vis.line(
+            win=self.value_window,
+            X=torch.Tensor([step]).cpu(),
+            Y=torch.Tensor([reward]).cpu(),
+            update='append')
+
+    def update_cost(self, step, cost):
+        if self.cost_window is None:
+            self.cost_window = self.vis.line(
                 X=torch.Tensor([step]).cpu(),
                 Y=torch.Tensor([cost]).cpu(),
-                win=self.cost_window,
-                update='append')
+                opts=dict(xlabel='step',
+                          ylabel='cost',
+                          title='Cost_Dynamics_' + self.spec,
+                          legend=['cost']))
+        else:
+            self.vis.line(
+                    win=self.cost_window,
+                    X=torch.Tensor([step]).cpu(),
+                    Y=torch.Tensor([cost]).cpu(),
+                    update='append')
 
     def record_loss(self, step, loss=None, flag=False):
         if self.train:
             if flag:
-                window = self.cost_loss_window
+                if self.cost_loss_window is None:
+                    self.cost_loss_window = self.vis.line(
+                        X=torch.zeros((1,)).cpu(),
+                        Y=torch.zeros(1).cpu(),  # torch.zeros((1))
+                        opts=dict(xlabel='episode',
+                                  ylabel='mle loss for cost Critic Network',
+                                  title='Cost_Critic_Loss_' + self.spec,
+                                  legend=['Loss']))
+                self.vis.line(
+                    win=self.cost_loss_window,
+                    X=torch.Tensor([step]).cpu(),
+                    Y=torch.Tensor([loss]).cpu(),
+                    update='append')
             else:
-                window = self.value_loss_window
-            self.vis.line(
-                X=torch.Tensor([step]).cpu(),
-                Y=torch.Tensor([loss]).cpu(),
-                win=window,
-                update='append')
+                self.vis.line(
+                    win=self.value_loss_window,
+                    X=torch.Tensor([step]).cpu(),
+                    Y=torch.Tensor([loss]).cpu(),
+                    update='append')
 
     def text(self, tt):
         if self.text_window is None:
