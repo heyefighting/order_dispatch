@@ -48,7 +48,7 @@ class Route:
         min_loc_id = _distance[0][0]
         min_dis = _distance[0][1]
 
-        self.time_duration = self.time_duration + min_dis / 18 * 12  # 18km/h, 小数
+        self.time_duration = self.time_duration + min_dis / 25 * 12  # 25km/h, 小数
         self.time_list.append(self.time_duration)
 
         self.courier_loc = avail_loc[min_loc_id]  # 骑手移到下一站位置
