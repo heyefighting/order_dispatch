@@ -30,9 +30,9 @@ class Actor(Module):
         return torch.softmax(F.relu(self.f(l2)) + 1, dim=0).squeeze(1)  # 从shape(x,1)二维变为shape(x)一维
 
 
-class Critic(Module):
+class ValueCritic(Module):
     def __init__(self, state_dim):
-        super(Critic, self).__init__()
+        super(ValueCritic, self).__init__()
         self.S = torch.nn.Linear(state_dim, 128)
         self.l1 = torch.nn.Linear(128, 64)
         self.l2 = torch.nn.Linear(64, 32)
@@ -42,4 +42,20 @@ class Critic(Module):
         S1 = F.relu(self.S(X))
         l1 = F.relu(self.l1(S1))
         l2 = F.relu(self.l2(l1))
-        return F.relu(self.f(l2))
+        return self.f(l2)
+
+
+class CostCritic(Module):
+    def __init__(self, state_dim):
+        super(CostCritic, self).__init__()
+        self.S = torch.nn.Linear(state_dim, 128)
+        self.l1 = torch.nn.Linear(128, 64)
+        self.l2 = torch.nn.Linear(64, 32)
+        self.f = torch.nn.Linear(32, 1)
+
+    def forward(self, X):
+        S1 = torch.tanh(self.S(X))
+        l1 = torch.tanh(self.l1(S1))
+        l2 = torch.tanh(self.l2(l1))
+        y = torch.tanh(self.f(l2))
+        return 0.5*(torch.sgn(y)+1)  # ,torch.sigmoid(self.f(l2))
