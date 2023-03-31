@@ -8,7 +8,7 @@ import sys
 import random
 import pandas as pd
 from torch.nn import MSELoss
-from models import Actor, Critic
+from models import Actor, ValueCritic, CostCritic
 
 from env_utils.neighbours import *
 from envs.order_dispatching import *
@@ -128,13 +128,13 @@ class CPO:
                  val_lr=1e-2, cost_lr=1e-2, max_constraint_val=0.1, val_small_loss=1e-3, cost_small_loss=1e-3,
                  discount_val=0.995, discount_cost=0.995, lambda_val=0.98, lambda_cost=0.98,
                  line_search_coefficient=0.9, line_search_max_iter=10, line_search_accept_ratio=0.1,
-                 continue_from_file=False, save_every=1, print_updates=True):
+                 continue_from_file=True, save_every=1, print_updates=True):
         # Actor
         self.policy = Actor(state_dim, action_dim)
         # Critic for value function
-        self.value_function = Critic(state_dim)
+        self.value_function = ValueCritic(state_dim)
         # Critic for cost function
-        self.cost_function = Critic(state_dim)
+        self.cost_function = CostCritic(state_dim)
         # replay buffer
         self.replay = ReplayMemory(capacity, batch_size)
         # environment for order dispatching
@@ -191,8 +191,8 @@ class CPO:
     def train(self, n_episodes, n_step, alpha, beta):
         trajectory_value_loss = []
         trajectory_cost_loss = []
-        while self.episode_num < n_episodes:
-            fileName = "datasets/orderData" + str(self.episode_num + 1) + ".csv"
+        while self.episode_num < n_episodes-23:
+            fileName = "datasets/orderData" + str(self.episode_num + 1+23) + ".csv"
             orders_data = pd.read_csv(fileName)
             self.env.reset_env(orders_data)  # 出现新的订单与用户
             del orders_data
@@ -227,7 +227,7 @@ class CPO:
                         state_couriers = get_courier_state(self.env, state, couriers)
                         state_input = get_state_input(state_couriers, action)  # state, action拼接
                         # c_id = self.take_action(state_input)  # , softmax_V
-                        c_id = self.take_action(state_input, 0.01)  # , softmax_V
+                        c_id = self.take_action(state_input, 0.02)  # , softmax_V
 
                         i_order.set_order_accept_time(self.env.time_slot_index)  # 订单设置接单时间
                         self.env.shops_dict[i_order.shop_loc].add_order(i_order)  # 相应商家order_list添加该订单
@@ -324,7 +324,7 @@ class CPO:
         imp_sampling = torch.exp(log_action_prob - log_action_prob.detach()).view(-1, 1)  # 重要性采样
 
         reward_loss = -torch.mean(imp_sampling * reward_advantage)  # 以平均作为期望,-surrogate_objective
-        print(reward_loss)
+        # print(reward_loss)
         reward_grad = flat_grad(reward_loss, self.policy.parameters(), retain_graph=True)  # 计算梯度
 
         constraint_loss = torch.mean(imp_sampling * constraint_advantage)
@@ -357,7 +357,7 @@ class CPO:
 
             if is_feasible:  # 对偶解法
                 lam, nu = self.calc_dual_vars(q, r, s, c)  # dual_vars: 对偶问题最优解(整数规划一般不考虑对偶问题的最优解)
-                print('lam, nu', lam, nu)
+                # print('lam, nu', lam, nu)
                 search_dir = -(1 / (lam + EPS)) * (F_inv_g + nu * F_inv_b)  # 1/lam*(H^(-1)g-H^(-1)B*nu)
             else:
                 search_dir = -torch.sqrt(
@@ -393,7 +393,7 @@ class CPO:
 
                 # 判断cost是否在范围内
                 cost_cond = step_length * torch.matmul(constraint_grad, search_direction) <= max(-c, 0.0)
-                print('test_dists', test_dists)
+                # print('test_dists', test_dists)
                 # 判断kl散度是否在范围内
                 test_kl = mean_kl_first_fixed(action_dists.detach(), test_dists)  # 新旧策略之间的KL距离
                 kl_cond = (test_kl <= self.max_kl)
@@ -405,7 +405,7 @@ class CPO:
 
             return cost_cond and kl_cond
 
-        print('search_dir', search_dir)
+        # print('search_dir', search_dir)
         # 若十步内找不到合适的参数, step_len就返回0, 即参数不变
         step_len = line_search(search_dir, 1.0, line_search_criterion,
                                self.line_search_coefficient, self.line_search_max_iter)
@@ -499,17 +499,17 @@ class CPO:
         torch.save(ptFile, save_path)
 
     def load_session(self):
-        load_path = os.path.join(save_dir, 'CMO_RL_Dispatch' + '.pt')
+        load_path = os.path.join(save_dir, 'model0329' + '.pt')
         ptFile = torch.load(load_path)
 
         self.policy.load_state_dict(ptFile['policy_state_dict'])
-        self.value_function.load_state_dict(ptFile['value_state_dict'])
-        self.cost_function.load_state_dict(ptFile['cost_state_dict'])
-        self.mean_rewards = ptFile['mean_rewards']
-        self.mean_costs = ptFile['mean_costs']
-        self.mean_value_loss = ptFile['mean_value_loss']
-        self.mean_cost_loss = ptFile['mean_cost_loss']
-        self.episode_num = ptFile['episode_num']
+        # self.value_function.load_state_dict(ptFile['value_state_dict'])
+        # self.cost_function.load_state_dict(ptFile['cost_state_dict'])
+        # self.mean_rewards = ptFile['mean_rewards']
+        # self.mean_costs = ptFile['mean_costs']
+        # self.mean_value_loss = ptFile['mean_value_loss']
+        # self.mean_cost_loss = ptFile['mean_cost_loss']
+        # self.episode_num = ptFile['episode_num']
 
     def print_update(self):
         update_message = '[Episode]: {0} | [Avg. Reward]: {1} | [Avg. Cost]: {2}'
