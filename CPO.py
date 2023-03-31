@@ -191,8 +191,8 @@ class CPO:
     def train(self, n_episodes, n_step, alpha, beta):
         trajectory_value_loss = []
         trajectory_cost_loss = []
-        while self.episode_num < n_episodes-23:
-            fileName = "datasets/orderData" + str(self.episode_num + 1+23) + ".csv"
+        while self.episode_num < n_episodes:
+            fileName = "datasets/orderData" + str(self.episode_num + 1) + ".csv"
             orders_data = pd.read_csv(fileName)
             self.env.reset_env(orders_data)  # 出现新的订单与用户
             del orders_data
