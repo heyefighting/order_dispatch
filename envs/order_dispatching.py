@@ -5,14 +5,7 @@ description:
 """
 import torch
 import numpy as np
-
-use_cuda = False  # torch.cuda.is_available()
-
-# device = torch.device("cuda") if use_cuda else torch.device("cpu")
-# FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
-# LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
-# ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
-# Tensor = FloatTensor
+import pandas as pd
 
 
 def get_courier_state(env, state, couriers):
@@ -108,27 +101,20 @@ class DispatchPair:
         self.next_action = np.array(next_action)
 
     def set_cost(self, cost):
-        # n = len(cost)
-        # minC = np.array([min(cost)]*n)
-        # cost = np.array(cost)-minC  # 取正
-        # # jain's fairness
-        # self.cost = np.sum(cost)**2/(n*np.sum(np.square(cost))+1e-6)
         if cost <= 0:
             self.cost = 0
         else:
             self.cost = 1
 
-    # def set_policy(self, policy):
-    #     self.policy = policy
-
     def get_reward(self):
         return self.reward
 
-    def set_reward(self, env, alpha, beta):
+    def set_reward(self, env, alpha, beta, i_episode, flag):
         Loss = torch.nn.MSELoss()
         delivery_efficiency = []
         shop_radio_sum = []
         courier_efficiency = 0.0
+        resultList = []
 
         for courier_id, courier in env.couriers_dict.items():
             if courier.online is True and courier.occur_time <= env.time_slot_index:
@@ -138,14 +124,22 @@ class DispatchPair:
                         if env.shops_dict[order.shop_loc] not in env.involved_shop:
                             env.involved_shop.append(env.shops_dict[order.shop_loc])
                         delivery_fee += order.price  # 订单效益
-
+                        if flag:
+                            resultList.append([order.order_id, courier_id, env.shops_dict[order.shop_loc].shop_id,
+                                               order.shop_loc.longitude, order.shop_loc.latitude,
+                                               order.user_loc.longitude, order.user_loc.latitude,
+                                               order.promise_delivery_duration, order.price,
+                                               order.order_create_time, order.order_accept_time,
+                                               order.order_pickup_time, order.order_delivery_time,
+                                               order.real_delivery_duration])
                 if delivery_fee != 0.0:
                     total_fee = env.couriers_dict[courier_id].sum_fee + delivery_fee
-                    work_time = env.couriers_dict[courier_id].work_day + int(env.time_slot_index - courier.occur_time + 1)
+                    work_time = env.couriers_dict[courier_id].work_day + int(
+                        env.time_slot_index - courier.occur_time + 1)
                     delivery_efficiency.append(total_fee / work_time)
                 else:
                     delivery_efficiency.append(0)
-                if courier_id == self.courier.courier_id:
+                if self.courier is not None and courier_id == self.courier.courier_id:
                     courier_efficiency = delivery_efficiency[-1]
 
         efficiency = torch.from_numpy(np.array(delivery_efficiency))
@@ -166,5 +160,78 @@ class DispatchPair:
             mean_fairness = torch.tensor([np.mean(np.array(shop_radio_sum))] * fairness.shape[0])
             shop_fairness = Loss(fairness, mean_fairness).item()
 
+        if flag:
+            df = pd.DataFrame(resultList,
+                              columns=['order_id', 'rider_id', 'shop_id', 'shop_longitude', 'shop_latitude',
+                                       'user_longitude', 'user_latitude', 'promise_delivery_time', 'delivery_fee',
+                                       'order_create_time', 'rider_accept_order_time',
+                                       'rider_arrive_restaurant_time', 'rider_delivery_time', 'real_delivery_duration'])
+            fileName = 'save-dir/result/episode' + str(i_episode) + '.csv'
+            df.to_csv(fileName)  # 追加数据
+
         # three parts: order price + courier fairness + shop fairness
         self.reward = (1 - alpha - beta) * courier_efficiency - alpha * courier_fairness - beta * shop_fairness
+
+    def set_penalty_reward(self, env, alpha, beta, rate, i_episode, flag):
+        Loss = torch.nn.MSELoss()
+        delivery_efficiency = []
+        shop_radio_sum = []
+        courier_efficiency = 0.0
+        resultList = []
+
+        for courier_id, courier in env.couriers_dict.items():
+            if courier.online is True and courier.occur_time <= env.time_slot_index:
+                delivery_fee = 0.0
+                if len(courier.order_list):
+                    for order in courier.order_list:
+                        if env.shops_dict[order.shop_loc] not in env.involved_shop:
+                            env.involved_shop.append(env.shops_dict[order.shop_loc])
+                        delivery_fee += order.price  # 订单效益
+                        if flag:
+                            resultList.append([order.order_id, courier_id, env.shops_dict[order.shop_loc].shop_id,
+                                               order.shop_loc.longitude, order.shop_loc.latitude,
+                                               order.user_loc.longitude, order.user_loc.latitude,
+                                               order.promise_delivery_duration, order.price,
+                                               order.order_create_time, order.order_accept_time,
+                                               order.order_pickup_time, order.order_delivery_time,
+                                               order.real_delivery_duration])
+                if delivery_fee != 0.0:
+                    total_fee = env.couriers_dict[courier_id].sum_fee + delivery_fee
+                    work_time = env.couriers_dict[courier_id].work_day + int(
+                        env.time_slot_index - courier.occur_time + 1)
+                    delivery_efficiency.append(total_fee / work_time)
+                else:
+                    delivery_efficiency.append(0)
+                if self.courier is not None and courier_id == self.courier.courier_id:
+                    courier_efficiency = delivery_efficiency[-1]
+
+        efficiency = torch.from_numpy(np.array(delivery_efficiency))
+        mean_efficiency = torch.tensor([np.mean(np.array(delivery_efficiency))] * efficiency.shape[0])
+        courier_fairness = Loss(efficiency, mean_efficiency).item()
+
+        for shop in env.involved_shop:
+            shopRadioMean = 0
+            for r in shop.order_time_distance_radio:
+                if r:
+                    shopRadioMean += r[0]
+            # if shopRadioMean != 0:
+            shop_radio_sum.append(shopRadioMean / shop.order_num)
+        if len(shop_radio_sum) == 0:
+            shop_fairness = 0
+        else:
+            fairness = torch.from_numpy(np.array(shop_radio_sum))
+            mean_fairness = torch.tensor([np.mean(np.array(shop_radio_sum))] * fairness.shape[0])
+            shop_fairness = Loss(fairness, mean_fairness).item()
+
+        if flag:
+            df = pd.DataFrame(resultList,
+                              columns=['order_id', 'rider_id', 'shop_id', 'shop_longitude', 'shop_latitude',
+                                       'user_longitude', 'user_latitude', 'promise_delivery_time', 'delivery_fee',
+                                       'order_create_time', 'rider_accept_order_time',
+                                       'rider_arrive_restaurant_time', 'rider_delivery_time', 'real_delivery_duration'])
+            fileName = '../save-dir/result/episode' + str(i_episode) + '.csv'
+            df.to_csv(fileName)  # 追加数据
+
+        # three parts: order price + courier fairness + shop fairness
+        self.reward = (1 - alpha - beta) * courier_efficiency \
+                      - alpha * courier_fairness - beta * shop_fairness - rate * self.cost
