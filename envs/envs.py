@@ -295,3 +295,23 @@ class Environment:
                             actions.append(action)
 
         return id_list, couriers, wait_times, actions
+
+    def mini_distance_action(self, order):
+        ds = []
+        picked_courier_id = -1
+        resulted_wait_time = -1
+        for courier_id, ic in self.couriers_dict.items():
+            if ic.full is False and ic.online is True and ic.occur_time <= self.time_slot_index:
+                shop_lat = order.shop_latitude
+                shop_long = order.shop_longitude
+                distance = get_distance_hav(ic.latitude, ic.longitude, shop_lat, shop_long)
+                time_cost, wait_time, route = ic.take_order_temp(order, self)
+                ds.append((ic, distance, wait_time))
+
+        ds.sort(key=lambda x_: x_[1])
+        if len(ds) != 0:
+            c_courier = ds[0][0]
+            resulted_wait_time = ds[0][2]
+            picked_courier_id = c_courier.courier_id  # 选最近的骑手
+
+        return picked_courier_id, resulted_wait_time
