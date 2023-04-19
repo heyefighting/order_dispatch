@@ -239,7 +239,10 @@ class CPO:
                         d.set_state_input(state_input)  # [c_id]
                         d.set_state(state_couriers[c_id])  #
                         d.set_action(c_id)  # int
-                        d.set_reward(self.env, alpha, beta)
+                        record = False
+                        if i_step == n_step and self.env.time_slot_index == 167:
+                            record = True
+                        d.set_reward(self.env, alpha, beta, self.episode_num, record)
                         d.set_cost(wait_time[c_id])  # 0:不超时, 1:超时
                         trajectory_rewards.append(d.reward)
                         trajectory_costs.append(d.cost)
@@ -324,7 +327,6 @@ class CPO:
         imp_sampling = torch.exp(log_action_prob - log_action_prob.detach()).view(-1, 1)  # 重要性采样
 
         reward_loss = -torch.mean(imp_sampling * reward_advantage)  # 以平均作为期望,-surrogate_objective
-        # print(reward_loss)
         reward_grad = flat_grad(reward_loss, self.policy.parameters(), retain_graph=True)  # 计算梯度
 
         constraint_loss = torch.mean(imp_sampling * constraint_advantage)
@@ -336,7 +338,8 @@ class CPO:
         # 用共轭梯度法计算x = H^(-1)g
         F_inv_g = cg_solver(Fvp_fun, reward_grad)  # F_inv_g = H^(-1)g, g是目标函数的梯度
         F_inv_b = cg_solver(Fvp_fun, constraint_grad)  # F_inv_b = H^(-1)B, bi是第i个约束的梯度
-
+        # print('F_inv_g', F_inv_g)
+        # print('F_inv_b', F_inv_b)
         q = torch.matmul(reward_grad, F_inv_g)  # q = g^T*H^(-1)g
         c = (J_c - self.max_constraint_val)  # c = J_c(π_k) − d
 
@@ -359,9 +362,12 @@ class CPO:
                 lam, nu = self.calc_dual_vars(q, r, s, c)  # dual_vars: 对偶问题最优解(整数规划一般不考虑对偶问题的最优解)
                 # print('lam, nu', lam, nu)
                 search_dir = -(1 / (lam + EPS)) * (F_inv_g + nu * F_inv_b)  # 1/lam*(H^(-1)g-H^(-1)B*nu)
+                # print('search_dir', search_dir)
             else:
+                print('s', s)
                 search_dir = -torch.sqrt(
                     2 * self.max_kl / (s + EPS)) * F_inv_b  # sqrt(2*delta/(b^T*H^(-1)*b))*(H^(-1)*b)
+                # print('search_dir', search_dir)
 
         # Should be positive
         expected_loss_improve = torch.matmul(reward_grad, search_dir)
@@ -372,7 +378,6 @@ class CPO:
             # step_length:步长
             test_policy = current_policy + step_length * search_direction
             set_params(self.policy, test_policy)
-
             with torch.no_grad():  # Test if conditions are satisfied
                 test_prob = torch.tensor([])
                 test_dists = torch.tensor([])
@@ -405,7 +410,6 @@ class CPO:
 
             return cost_cond and kl_cond
 
-        # print('search_dir', search_dir)
         # 若十步内找不到合适的参数, step_len就返回0, 即参数不变
         step_len = line_search(search_dir, 1.0, line_search_criterion,
                                self.line_search_coefficient, self.line_search_max_iter)
@@ -499,12 +503,12 @@ class CPO:
         torch.save(ptFile, save_path)
 
     def load_session(self):
-        load_path = os.path.join(save_dir, 'model0329' + '.pt')
+        load_path = os.path.join(save_dir, 'model0411' + '.pt')
         ptFile = torch.load(load_path)
 
         self.policy.load_state_dict(ptFile['policy_state_dict'])
-        # self.value_function.load_state_dict(ptFile['value_state_dict'])
-        # self.cost_function.load_state_dict(ptFile['cost_state_dict'])
+        self.value_function.load_state_dict(ptFile['value_state_dict'])
+        self.cost_function.load_state_dict(ptFile['cost_state_dict'])
         # self.mean_rewards = ptFile['mean_rewards']
         # self.mean_costs = ptFile['mean_costs']
         # self.mean_value_loss = ptFile['mean_value_loss']
