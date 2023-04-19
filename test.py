@@ -4,7 +4,6 @@ data: 2023-03-26
 description: test the memory
 """
 import random
-import pandas as pd
 from monitor import Monitor
 from torch.nn import MSELoss
 from models import Actor, CostCritic, ValueCritic
@@ -12,133 +11,13 @@ from models import Actor, CostCritic, ValueCritic
 from envs.envs import Environment
 from env_utils.neighbours import *
 from envs.order_dispatching import *
-from optimization_utils.hvp import get_Hvp_fun
-from optimization_utils.line_search import line_search
-from optimization_utils.conjugate_gradient import cg_solver
-from torch_utils.distribution_utils import mean_kl_first_fixed
-from torch_utils.torch_utils import flat_grad, get_flat_params, set_params
+
 
 save_dir = 'save-dir'
 
 
-def discount(value, discount_term):
-    n = value.size(0)
-    disc_pow = torch.pow(discount_term, torch.arange(n).float())
-    reverse_index = torch.arange(n - 1, -1, -1)
-
-    discounted = torch.cumsum((value * disc_pow)[reverse_index], dim=-1)[reverse_index] / disc_pow
-
-    return discounted
-
-
-# 广义优势估计:A^(GAE)_t=\sum(gamma*lambda)^l*delta_(t+l)
-def compute_advantage(actual_value, exp_value, discount_term, bias_red_param):
-    exp_value_next = torch.cat([exp_value[1:], torch.tensor([0.0])])
-    td_res = actual_value + discount_term * exp_value_next - exp_value  # 时序差分误差td_error:r+gamma*V(s_t+1)-V(s_t)
-    advantage = discount(td_res, discount_term * bias_red_param)
-
-    return advantage
-
-
-# GAE的代码
-def compute_adv(gamma, lm, td_delta):
-    """
-    GAE 将不同步数的优势估计进行指数加权平均
-    :param gamma: 折扣因子
-    :param lm:
-           lm=0时, A_t=delta_t=r+gamma*V(s_t+1)-V(s_t),仅仅只看一步差分得到的优势;
-           lm=1时, A_t=sum_{l=0}^{T}(gamma^l*r_{t+l})是看每一步差分得到优势的完全平均值
-    :param td_delta: 时序差分
-    :return:优势函数
-    """
-    advantage_list = []
-    advantage = 0.0
-    for delta in td_delta[::-1]:
-        advantage = gamma * lm * advantage + delta
-        advantage_list.append(advantage)
-    advantage_list.reverse()
-    return torch.tensor(advantage_list, dtype=torch.float32)
-
-
-class ReplayMemory:
-    def __init__(self, memory_size, batch_size):
-        self.states = None
-        self.state_inputs = None
-        self.actions = None
-        self.rewards = None
-        self.next_states = None
-        self.cost = None
-        # self.policy = None
-
-        self.batch_size = batch_size
-        self.memory_size = memory_size
-        self.current = 0
-        self.curr_lens = 0
-
-    def add(self, sa, s, a, r, next_s, c):
-        if self.curr_lens == 0:
-            self.states = s
-            self.state_inputs = sa
-            self.actions = a
-            self.rewards = r
-            self.next_states = next_s
-            self.curr_lens = len(self.states)
-            self.cost = c
-            # self.policy = p
-
-        elif self.curr_lens + len(s) <= self.memory_size:  # len(s)=s.shape[0]
-            # self.states = np.concatenate((self.states, s), axis=0)
-            # self.state_inputs = np.concatenate((self.state_inputs, sa), axis=0)
-            # self.next_states = np.concatenate((self.next_states, next_s), axis=0)
-            # self.actions = np.concatenate((self.actions, a), axis=0)
-            # self.rewards = np.concatenate((self.rewards, r), axis=0)
-            # self.curr_lens = self.states.shape[0]
-            # self.cost = np.concatenate((self.cost, c), axis=0)
-            # self.policy = np.concatenate((self.policy, p), axis=0)
-            self.states.extend(s)
-            self.state_inputs.extend(sa)
-            self.next_states.extend(next_s)
-            self.actions.extend(a)
-            self.rewards.extend(r)
-            self.curr_lens = len(self.states)
-            self.cost.extend(c)
-        else:
-            new_sample_lens = len(s)
-            reserve_lens = self.memory_size - new_sample_lens
-
-            self.states[0:reserve_lens] = self.states[self.curr_lens - reserve_lens:self.curr_lens]
-            self.state_inputs[0:reserve_lens] = self.state_inputs[self.curr_lens - reserve_lens:self.curr_lens]
-            self.actions[0:reserve_lens] = self.actions[self.curr_lens - reserve_lens:self.curr_lens]
-            self.rewards[0:reserve_lens] = self.rewards[self.curr_lens - reserve_lens:self.curr_lens]
-            self.next_states[0:reserve_lens] = self.next_states[self.curr_lens - reserve_lens:self.curr_lens]
-            self.cost[0:reserve_lens] = self.cost[self.curr_lens - reserve_lens:self.curr_lens]
-            # self.policy[0:reserve_lens] = self.policy[self.curr_lens - reserve_lens:self.curr_lens]
-
-            self.states[self.curr_lens: self.memory_size] = s
-            self.state_inputs[self.curr_lens: self.memory_size] = sa
-            self.actions[self.curr_lens: self.memory_size] = a
-            self.rewards[self.curr_lens: self.memory_size] = r
-            self.next_states[self.curr_lens: self.memory_size] = next_s
-            self.cost[self.curr_lens: self.memory_size] = c
-            # self.policy[self.curr_lens: self.memory_size] = p
-
-    def sample(self):
-        if self.curr_lens <= self.batch_size:
-            return [self.state_inputs, self.states, self.rewards, self.next_states, self.cost, self.actions]
-        # indices = random.sample(range(0, self.curr_lens), self.batch_size)
-        rand = random.randint(0, self.curr_lens - self.batch_size)
-        batch_s = self.states[rand:rand + self.batch_size]
-        batch_sa = self.state_inputs[rand:rand + self.batch_size]
-        batch_a = self.actions[rand:rand + self.batch_size]
-        batch_r = self.rewards[rand:rand + self.batch_size]
-        batch_next_s = self.next_states[rand:rand + self.batch_size]
-        batch_c = self.cost[rand:rand + self.batch_size]
-        # batch_p = self.policy[indices]
-        return batch_sa, batch_s, batch_r, batch_next_s, batch_c, batch_a
-
-
 class CPO:
-    def __init__(self, state_dim, action_dim, capacity, batch_size, simulator, device, Monitor, max_kl=1e-2,
+    def __init__(self, state_dim, action_dim, capacity, batch_size, simulator, Monitor, max_kl=1e-2,
                  val_lr=1e-2, cost_lr=1e-2, max_constraint_val=0.1, val_small_loss=1e-3, cost_small_loss=1e-3,
                  discount_val=0.995, discount_cost=0.995, lambda_val=0.98, lambda_cost=0.98,
                  line_search_coefficient=0.9, line_search_max_iter=10, line_search_accept_ratio=0.1,
@@ -149,8 +28,8 @@ class CPO:
         self.value_function = ValueCritic(state_dim)
         # Critic for cost function
         self.cost_function = CostCritic(state_dim)
-        # replay buffer
-        self.replay = ReplayMemory(capacity, batch_size)
+        # # replay buffer
+        # self.replay = ReplayMemory(capacity, batch_size)
         # environment for order dispatching
         self.env = simulator
 
@@ -176,7 +55,6 @@ class CPO:
         self.value_optimizer = torch.optim.Adam(self.value_function.parameters(), lr=val_lr)
         self.cost_optimizer = torch.optim.Adam(self.value_function.parameters(), lr=cost_lr)
 
-        self.device = device
         self.save_every = save_every
         self.print_updates = print_updates
         self.monitor = Monitor
@@ -199,7 +77,7 @@ class CPO:
             c_id = random.choice([index for index, t in enumerate(action_prob) if t == maxi])
         return c_id
 
-    def train(self, n_episodes, n_step, alpha, beta):
+    def test(self, n_episodes, n_step, alpha, beta):
         trajectory_value_loss = []
         trajectory_cost_loss = []
         while self.episode_num < n_episodes:
@@ -248,7 +126,10 @@ class CPO:
                         d.set_state_input(state_input)  # [c_id]
                         d.set_state(state_couriers[c_id])  #
                         d.set_action(c_id)  # int
-                        d.set_reward(self.env, alpha, beta)
+                        record = False
+                        if i_step == n_step and self.env.time_slot_index == 167:
+                            record = True
+                        d.set_reward(self.env, alpha, beta, self.episode_num, record)
                         d.set_cost(wait_time[c_id])  # 0:不超时, 1:超时
                         trajectory_rewards.append(d.reward)
                         trajectory_costs.append(d.cost)
@@ -273,7 +154,7 @@ class CPO:
                 self.print_update()
 
     def load_session(self):
-        actor_load_path = os.path.join(save_dir, 'model0329_actor' + '.pt')
+        actor_load_path = os.path.join(save_dir, 'model0329_actor' + '.pt')  # d=5%
         actor_ptFile = torch.load(actor_load_path)
         cost_load_path = os.path.join(save_dir, 'model0330_critic' + '.pt')
         cost_ptFile = torch.load(cost_load_path)
@@ -281,6 +162,11 @@ class CPO:
         self.policy.load_state_dict(actor_ptFile['policy_state_dict'])
         self.value_function.load_state_dict(cost_ptFile['value_state_dict'])
         self.cost_function.load_state_dict(cost_ptFile['cost_state_dict'])
+        # load_path = os.path.join(save_dir, 'model0411' + '.pt')  # d=10%
+        # ptFile = torch.load(load_path)
+        # self.policy.load_state_dict(ptFile['policy_state_dict'])
+        # self.value_function.load_state_dict(ptFile['value_state_dict'])
+        # self.cost_function.load_state_dict(ptFile['cost_state_dict'])
 
     def print_update(self):
         update_message = '[Episode]: {0} | [Avg. Reward]: {1} | [Avg. Cost]: {2}'
@@ -328,9 +214,9 @@ if __name__ == '__main__':
               line_search_accept_ratio=line_search_accept_ratio)
 
     # for train
-    n_episodes = 565
+    n_episodes = 30
     n_steps = 168  # 一天内
     alpha = 0.3  # reward中骑手公平的权重
     beta = 0.3  # reward中商家公平的权重
 
-    cpo.train(n_episodes, n_steps, alpha, beta)
+    cpo.test(n_episodes, n_steps, alpha, beta)
