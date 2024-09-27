@@ -1,5 +1,6 @@
 # MOSC
-该仓库开源了我本科阶段的一段meaningful科研经历的工作，它的前身是我发表的第一篇CCF论文[WASA, 2022]"Toward Multi-sided Fairness: A Fairness-Aware Order Dispatch System for Instant Delivery Service"，后来在此基础上完善，我又完成了本科毕业设计"基于多方公平的即时配送场景派单算法设计与实现"，提名江苏省优秀毕业设计，校优撒花❀
+该仓库开源了我本科阶段的一段meaningful科研经历的工作，它的前身是我发表的第一篇CCF论文[WASA, 2022]"Toward Multi-sided Fairness: A Fairness-Aware Order Dispatch System for Instant Delivery Service"，后来在此基础上完善，我又完成了本科毕业设计"基于多方公平的即时配送场景派单算法设计与实现"，提名江苏省优秀毕业设计，校优撒花❀
+
 [论文链接](https://link.springer.com/chapter/10.1007/978-3-031-19214-2_25)
 
 ## 引用 Citation
@@ -17,10 +18,12 @@
 ## 论文总结 Summarization
 ### 系统利润效益比较
 从即时配送平台角度来看，派单算法的派单质量不可或缺的一个评价指标便是其总体利润收益，因此本文将MOSC模型与其他基线模型进行比较。下图给出了不同派单算法下午高峰与晚高峰时段的系统利润收益变化。可以发现，所有方法由于强化学习技术的引入，与原始数据相比，都不同程度地提高了即时配送平台的总收益，其中MOSC模型以比GT增加了8.11%的优势胜过其他基准模型。
+
 ![不同派单算法下的午、晚高峰系统收益变化](https://github.com/user-attachments/assets/d104ddfb-d3ea-4de1-bcc1-a935c73f0d49)
 
 ### 多方公平性比较
 本文的另一个关键目标是提高即时配送场景下多方利益相关者的公平性权益。下图1展示了从开始派单不断累积的骑手收入基尼系数变化，图2统计出基尼系数Gini与方差PF评价指标值，可见MOSC模型与PPO-Lagrangian方法不相上下，均有效提高了骑手利润公平性。
+
 ![骑手收入基尼系数变化](https://github.com/user-attachments/assets/5550201d-ac87-44a6-9c31-3381e7f9d543)
 
 ![不同派单算法下的骑手公平实验指标](https://github.com/user-attachments/assets/5f1de005-5c19-4820-9f53-11bd2723cca2)
